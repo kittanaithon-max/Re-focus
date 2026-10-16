@@ -185,7 +185,7 @@ table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;p
  .shell{grid-template-columns:1fr}
  .side{display:none}
  main{padding:18px 16px 110px}
- .bottom{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+ .bottom{display:grid;grid-template-columns:repeat(6,1fr);position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
  .bottom button{border:0;background:none;color:var(--tx2);display:flex;flex-direction:column;align-items:center;gap:0;padding:6px 2px;font-size:12px;min-height:52px;border-radius:12px}
  .bottom button i{font-style:normal;font-size:21px}.bottom button.on{color:var(--pd);background:var(--soft)}
  .grid-dash{grid-template-columns:1fr}
@@ -204,6 +204,7 @@ table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;p
 <div id="runner"></div>
 <div id="toasts" aria-live="polite"></div>
 
+<script>if(!(window.google&&google.script&&google.script.run))document.write('<script src="config.js"><\/script>');</script>
 <script>
 /* =====================================================================
  * Re:focus — Frontend
@@ -240,7 +241,7 @@ const CAT = { move: 'Move & Stretch', mind: 'Mind Reset', game: 'Mini Games' };
 /* ---------- server calls ---------- */
 // เปิดผ่านหน้า Web App ของ Google → ใช้ google.script.run
 // โฮสต์หน้านี้เองนอก Google (GitHub Pages / Netlify) → วาง Web App URL (ลงท้าย /exec) ที่นี่
-const API_URL = window.__API_URL__ || 'https://script.google.com/macros/s/AKfycbwjHlWheE-bHPUl1g8ypIllBGRKk0NJBVIepzUrHYYjbvNEcarOGg7ocxEHUBtMYgqS0w/exec';
+const API_URL = window.__API_URL__ || '';
 const IN_GAS = !!(window.google && google.script && google.script.run);
 function rpcDone(r, resolve, reject) {
   if (r && r.serverNow) A.offset = r.serverNow - Date.now();
@@ -314,6 +315,7 @@ function syncPhase() {
 function savePhase() { store.set('rf_phase', A.P); }
 function applySession(r) {
   const s = r.session;
+  A.pet = null;
   A.session = s && (s.status === 'working' || s.status === 'paused' || s.status === 'break') ? s : null;
   if (r.today) A.today = r.today;
   if (A.session) syncPhase();
@@ -416,7 +418,7 @@ function renderOnboarding() {
 /* =====================================================================
  * Shell & navigation
  * ===================================================================== */
-const NAV = [['dashboard', '🏠', 'หน้าหลัก'], ['break', '🧘', 'กิจกรรมพัก'], ['report', '📊', 'รายงาน'], ['plan', '⭐', 'แพ็กเกจ'], ['settings', '⚙️', 'ตั้งค่า']];
+const NAV = [['dashboard', '🏠', 'หน้าหลัก'], ['break', '🧘', 'กิจกรรมพัก'], ['pet', '🐾', 'สัตว์เลี้ยง'], ['report', '📊', 'รายงาน'], ['plan', '⭐', 'แพ็กเกจ'], ['settings', '⚙️', 'ตั้งค่า']];
 function renderShell() {
   $('#root').innerHTML = `<div class="shell"><aside class="side"><div class="brand"><b>Re:</b><span>focus</span></div>
    ${NAV.map(n => `<button class="nav" data-act="nav" data-v="${n[0]}"><i>${n[1]}</i>${n[2]}</button>`).join('')}<div class="grow"></div>
@@ -426,17 +428,158 @@ function renderShell() {
 }
 function go(v) {
   A.view = v;
-  $$('[data-act="nav"]').forEach(b => b.classList.toggle('on', b.dataset.v === v || (v === 'admin' && b.dataset.v === 'settings')));
+  $$('[data-act="nav"]').forEach(b => b.classList.toggle('on', b.dataset.v === v || ((v === 'admin' || v === 'bill') && b.dataset.v === 'settings')));
   const pb = $('#planbox');
   if (pb) pb.innerHTML = `แพ็กเกจของคุณ<br><span class="badge ${A.profile.plan === 'Premium' ? 'premium' : 'free'}">${esc(A.profile.plan)}</span> ${A.profile.plan === 'Free' ? '<a href="#" data-act="nav" data-v="plan" style="color:var(--pd);font-size:13px">อัปเกรด</a>' : ''}`;
   const view = $('#view'); if (!view) return;
-  const f = { dashboard: vDashboard, break: vBreak, report: vReport, plan: vPlan, settings: vSettings, admin: vAdmin }[v] || vDashboard;
+  const f = { dashboard: vDashboard, break: vBreak, report: vReport, plan: vPlan, pet: vPet, bill: vBill, settings: vSettings, admin: vAdmin }[v] || vDashboard;
   view.innerHTML = f();
   window.scrollTo(0, 0);
   if (v === 'dashboard') paintTimer();
   if (v === 'report') loadReport();
+  if (v === 'bill') paintBill();
+  if (v === 'pet' || v === 'dashboard') loadPet();
 }
 const rerender = () => go(A.view);
+
+/* ---------- เครื่องมือเสริม: หารบิล (ทำงานในเครื่องผู้ใช้ ไม่ส่งข้อมูลไปเซิร์ฟเวอร์) ---------- */
+const BILL0 = () => ({ mode: 'equal', total: '', n: 2, svc: 0, vat: false, round: true, items: [{ name: '', amt: '' }, { name: '', amt: '' }] });
+function billCalc() {
+  const b = A.bill, mult = (1 + b.svc / 100) * (b.vat ? 1.07 : 1), fx = x => (b.round ? Math.ceil(x - 1e-9) : Math.round(x * 100) / 100) + 0;
+  if (b.mode === 'equal') {
+    const base = Math.max(0, +b.total || 0), n = Math.max(1, Math.floor(+b.n) || 1), grand = base * mult;
+    return { base, grand, per: fx(grand / n), n, paid: fx(grand / n) * n };
+  }
+  const rows = b.items.map(it => ({ name: it.name, base: Math.max(0, +it.amt || 0) }));
+  rows.forEach(r => r.pay = fx(r.base * mult));
+  const base = rows.reduce((a, r) => a + r.base, 0);
+  return { rows, base, grand: base * mult, paid: rows.reduce((a, r) => a + r.pay, 0) };
+}
+const baht = x => (Math.round(x * 100) / 100).toLocaleString('th-TH', { maximumFractionDigits: 2 });
+function vBill() {
+  if (!A.bill) A.bill = BILL0();
+  const b = A.bill, on = c => c ? 'on' : '';
+  return `<h1>หารบิล 🧾</h1><p class="muted">เครื่องมือเสริมสำหรับหารค่าอาหารหรือค่าใช้จ่ายกับเพื่อน คำนวณในเครื่องของคุณ ไม่บันทึกข้อมูลใด ๆ</p>
+  <div class="card" style="margin-top:14px">
+   <div class="seg"><button class="opt ${on(b.mode === 'equal')}" data-act="billSet" data-k="mode" data-v="equal"><b>หารเท่ากัน</b><small>ทุกคนจ่ายเท่ากัน</small></button>
+   <button class="opt ${on(b.mode === 'items')}" data-act="billSet" data-k="mode" data-v="items"><b>แยกตามที่สั่ง</b><small>ใครสั่งอะไรจ่ายตามนั้น</small></button></div>
+   ${b.mode === 'equal' ? `<div class="row"><div style="flex:2;min-width:150px"><label class="fl" for="bl-total">ยอดรวมในบิล (บาท)</label><input type="number" id="bl-total" inputmode="decimal" min="0" step="any" value="${esc(b.total)}" data-in="bill" data-k="total"></div>
+     <div style="flex:1;min-width:110px"><label class="fl" for="bl-n">จำนวนคน</label><input type="number" id="bl-n" inputmode="numeric" min="1" max="99" step="1" value="${b.n}" data-in="bill" data-k="n"></div></div>`
+    : `<div id="bl-items">${b.items.map((it, i) => `<div class="row" style="margin-top:10px;flex-wrap:nowrap"><input type="text" aria-label="ชื่อคนที่ ${i + 1}" placeholder="ชื่อ (เช่น เอ)" maxlength="30" value="${esc(it.name)}" data-in="bill" data-i="${i}" data-f="name" style="flex:2;min-width:0"><input type="number" aria-label="ยอดของคนที่ ${i + 1} (บาท)" placeholder="บาท" inputmode="decimal" min="0" step="any" value="${esc(it.amt)}" data-in="bill" data-i="${i}" data-f="amt" style="flex:1;min-width:0"><button class="btn sm ghost" data-act="billDel" data-i="${i}" aria-label="ลบรายการที่ ${i + 1}" ${b.items.length <= 1 ? 'disabled' : ''}>✕</button></div>`).join('')}</div>
+     <div class="mbtns"><button class="btn sm" data-act="billAdd" ${b.items.length >= 20 ? 'disabled' : ''}>+ เพิ่มคน</button></div>`}
+   <label class="fl">ค่าบริการ (Service charge)</label>
+   <div class="filters">${[0, 5, 10].map(v => `<button class="btn ${on(b.svc === v)}" data-act="billSet" data-k="svc" data-v="${v}">${v === 0 ? 'ไม่มี' : v + '%'}</button>`).join('')}</div>
+   <div class="switch"><div><b>บวก VAT 7%</b></div><button class="tog ${on(b.vat)}" data-act="billSet" data-k="vat" data-v="${!b.vat}" role="switch" aria-checked="${b.vat}" aria-label="บวก VAT 7%"></button></div>
+   <div class="switch"><div><b>ปัดขึ้นเป็นบาทเต็ม</b><br><span class="muted">จ่ายง่ายขึ้น ไม่ต้องทอนเศษสตางค์</span></div><button class="tog ${on(b.round)}" data-act="billSet" data-k="round" data-v="${!b.round}" role="switch" aria-checked="${b.round}" aria-label="ปัดขึ้นเป็นบาทเต็ม"></button></div>
+  </div>
+  <div class="card" style="margin-top:14px" aria-live="polite"><div id="bill-out"></div>
+   <div class="mbtns"><button class="btn" data-act="billCopy">คัดลอกผลลัพธ์</button> <button class="btn ghost" data-act="billReset">ล้างทั้งหมด</button></div></div>`;
+}
+function billText() {
+  const r = billCalc(), b = A.bill;
+  if (b.mode === 'equal') return `หารบิล: ยอดรวมหลังค่าบริการ/VAT ${baht(r.grand)} บาท หาร ${r.n} คน = คนละ ${baht(r.per)} บาท`;
+  return 'หารบิล (ยอดรวม ' + baht(r.grand) + ' บาท)\n' + r.rows.map((x, i) => `${x.name.trim() || 'คนที่ ' + (i + 1)}: ${baht(x.pay)} บาท`).join('\n');
+}
+function paintBill() {
+  const o = $('#bill-out'); if (!o) return;
+  const r = billCalc(), b = A.bill, extra = r.grand - r.base;
+  const note = `<p class="muted" style="margin-top:10px">ยอดก่อนบวก ${baht(r.base)} บาท${extra > 0.004 ? ` + ค่าบริการ/VAT ${baht(extra)} บาท` : ''} = ${baht(r.grand)} บาท${b.round && r.paid - r.grand > 0.004 ? ` · เศษที่ปัดขึ้นรวม ${baht(r.paid - r.grand)} บาท` : ''}</p>`;
+  o.innerHTML = b.mode === 'equal'
+    ? `<div class="muted">แต่ละคนจ่าย</div><div style="font-family:Prompt,sans-serif;font-size:40px;font-weight:700;color:var(--pd);line-height:1.2">${baht(r.per)} <span style="font-size:18px">บาท</span></div>${note}`
+    : `<div class="muted">แต่ละคนจ่าย</div>${r.rows.map((x, i) => `<div class="switch"><div><b>${esc(x.name.trim() || 'คนที่ ' + (i + 1))}</b></div><div style="font-family:Prompt,sans-serif;font-weight:600;font-size:20px">${baht(x.pay)} บาท</div></div>`).join('')}${note}`;
+}
+
+/* ---------- สัตว์เลี้ยงเสมือน (Virtual Pet) — แต้มและอารมณ์คำนวณที่เซิร์ฟเวอร์จากข้อมูลจริง ---------- */
+const PETS = {
+  cat:   { label: 'แมว',    body: '#F2B66D', dark: '#D9953F', belly: '#FFE7C2', ears: 'tri' },
+  bunny: { label: 'กระต่าย', body: '#F4B8CB', dark: '#DC8FA9', belly: '#FFE6EE', ears: 'long' },
+  bear:  { label: 'หมี',    body: '#B98B6A', dark: '#8E6446', belly: '#E8CDB5', ears: 'round' },
+  dino:  { label: 'ไดโน',   body: '#8FD3A8', dark: '#5DAE7E', belly: '#E3F6EA', ears: 'spike' }
+};
+function petSvg(type, stage, mood, size) {
+  const P = PETS[type] || PETS.cat, sc = [0.8, 0.62, 0.8, 1][stage] || 1;
+  if (stage === 0) {
+    return `<svg viewBox="0 0 200 200" width="${size}" height="${size}" role="img" aria-label="ไข่สัตว์เลี้ยง"><ellipse cx="100" cy="176" rx="46" ry="9" fill="#27364B" opacity=".08"/>
+     <path d="M100 28c-34 0-56 54-56 94 0 32 24 52 56 52s56-20 56-52c0-40-22-94-56-94z" fill="#FFF8EC" stroke="${P.dark}" stroke-width="4"/>
+     <circle cx="78" cy="94" r="9" fill="${P.body}" opacity=".85"/><circle cx="122" cy="118" r="12" fill="${P.body}" opacity=".85"/><circle cx="92" cy="146" r="7" fill="${P.body}" opacity=".85"/>
+     <path d="M62 78l12 10 10-12 12 12 10-12 12 12 12-10" fill="none" stroke="${P.dark}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/></svg>`;
+  }
+  const eyes = mood === 'happy' ? `<path d="M72 92q9-12 18 0M110 92q9-12 18 0" fill="none" stroke="#27364B" stroke-width="5" stroke-linecap="round"/>`
+    : mood === 'tired' ? `<path d="M72 94h18M110 94h18" stroke="#27364B" stroke-width="5" stroke-linecap="round"/><path d="M142 70c6 8 8 13 0 17-8-4-6-9 0-17z" fill="#8EC8F5"/>`
+    : `<circle cx="81" cy="92" r="7" fill="#27364B"/><circle cx="119" cy="92" r="7" fill="#27364B"/><circle cx="83" cy="89" r="2.2" fill="#fff"/><circle cx="121" cy="89" r="2.2" fill="#fff"/>`;
+  const mouth = mood === 'happy' ? `<path d="M88 108q12 14 24 0" fill="#fff" stroke="#27364B" stroke-width="4" stroke-linejoin="round"/>`
+    : mood === 'tired' ? `<path d="M90 116q10-7 20 0" fill="none" stroke="#27364B" stroke-width="4" stroke-linecap="round"/>`
+    : `<path d="M90 110q10 8 20 0" fill="none" stroke="#27364B" stroke-width="4" stroke-linecap="round"/>`;
+  const ears = P.ears === 'tri' ? `<path d="M50 70L56 24l36 28zM150 70l-6-46-36 28z" fill="${P.body}" stroke="${P.dark}" stroke-width="4" stroke-linejoin="round"/><path d="M60 56l2-16 14 11zM140 56l-2-16-14 11z" fill="${P.belly}"/>`
+    : P.ears === 'long' ? `<ellipse cx="72" cy="38" rx="14" ry="38" fill="${P.body}" stroke="${P.dark}" stroke-width="4" transform="rotate(-8 72 38)"/><ellipse cx="128" cy="38" rx="14" ry="38" fill="${P.body}" stroke="${P.dark}" stroke-width="4" transform="rotate(8 128 38)"/><ellipse cx="72" cy="40" rx="6" ry="26" fill="${P.belly}" transform="rotate(-8 72 40)"/><ellipse cx="128" cy="40" rx="6" ry="26" fill="${P.belly}" transform="rotate(8 128 40)"/>`
+    : P.ears === 'round' ? `<circle cx="56" cy="52" r="20" fill="${P.body}" stroke="${P.dark}" stroke-width="4"/><circle cx="144" cy="52" r="20" fill="${P.body}" stroke="${P.dark}" stroke-width="4"/><circle cx="56" cy="52" r="9" fill="${P.belly}"/><circle cx="144" cy="52" r="9" fill="${P.belly}"/>`
+    : `<path d="M70 44l8-22 10 20 12-24 12 24 10-20 8 22z" fill="${P.dark}" stroke="${P.dark}" stroke-width="3" stroke-linejoin="round"/>`;
+  const acc = stage === 2 ? `<path d="M66 150q34 16 68 0l-4 18q-30 10-60 0z" fill="#5B8DEF"/>`
+    : stage === 3 ? `<path d="M76 34l8-16 16 12 16-12 8 16z" fill="#FFD25E" stroke="#E8A33D" stroke-width="3" stroke-linejoin="round"/><path d="M66 150q34 16 68 0l-4 18q-30 10-60 0z" fill="#5B8DEF"/><circle cx="100" cy="168" r="6" fill="#FFD25E"/>` : '';
+  return `<svg viewBox="0 0 200 200" width="${size}" height="${size}" role="img" aria-label="สัตว์เลี้ยง"><ellipse cx="100" cy="182" rx="${54 * sc}" ry="8" fill="#27364B" opacity=".08"/>
+   <g transform="translate(100 190) scale(${sc}) translate(-100 -190)">${ears}
+   <ellipse cx="100" cy="124" rx="62" ry="58" fill="${P.body}" stroke="${P.dark}" stroke-width="4"/>
+   <ellipse cx="100" cy="140" rx="36" ry="30" fill="${P.belly}"/>
+   <circle cx="64" cy="112" r="9" fill="#FF9FB0" opacity=".55"/><circle cx="136" cy="112" r="9" fill="#FF9FB0" opacity=".55"/>
+   ${eyes}${mouth}${acc}</g></svg>`;
+}
+function petMoodText(m) { return m === 'happy' ? 'อารมณ์ดี 😊' : m === 'tired' ? 'เหนื่อยนิดหน่อย 😴' : 'ปกติ 🙂'; }
+async function loadPet() {
+  try { if (!A.pet) A.pet = await rpc('getPet', au()); }
+  catch (e) { const el = $('#pet-box') || $('#pet-mini'); if (el) el.innerHTML = `<p class="muted">โหลดสัตว์เลี้ยงไม่สำเร็จ: ${esc(e.message)} <button class="btn sm" data-act="petReload">ลองอีกครั้ง</button></p>`; return; }
+  if ($('#pet-mini')) paintPetMini();
+  if ($('#pet-box')) paintPet();
+}
+function petBar(p) {
+  const pct = p.nextAt === null ? 100 : Math.round((p.xp - p.stageAt) / (p.nextAt - p.stageAt) * 100);
+  return `<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${clamp01(pct)}%"></i></div>
+   <p class="muted" style="margin:6px 0 0">${p.nextAt === null ? 'โตเต็มวัยแล้ว แต้มสะสม ' + p.xp : 'อีก ' + (p.nextAt - p.xp) + ' แต้ม จะเป็น "' + esc(p.nextName) + '" (แต้มสะสม ' + p.xp + ')'}</p>`;
+}
+const clamp01 = n => Math.max(0, Math.min(100, n));
+function paintPetMini() {
+  const el = $('#pet-mini'); if (!el || !A.pet) return;
+  const d = A.pet, p = d.pet, pr = A.profile, type = d.petType || pr.petType || 'cat';
+  el.innerHTML = `<div class="row" style="flex-wrap:nowrap;gap:14px"><div style="flex:0 0 76px">${petSvg(type, p.stage, p.mood, 76)}</div>
+   <div style="flex:1;min-width:0"><b>${esc(d.petName || (d.petType ? 'สัตว์เลี้ยง' : 'ไข่ปริศนา'))}</b> <span class="chip gray" style="padding:1px 8px;font-size:12px">${esc(p.stageName)}</span><div class="muted">${d.petType ? esc(p.tip) : 'ยังไม่ได้รับเลี้ยง — มาเลือกเพื่อนใหม่กัน'}</div></div>
+   <button class="btn sm" data-act="nav" data-v="pet">ดู</button></div>`;
+}
+function vPet() { return `<h1>สัตว์เลี้ยงของฉัน 🐾</h1><p class="muted">ยิ่งทำงานและพักอย่างสมดุล สัตว์เลี้ยงก็ยิ่งโตและอารมณ์ดี ไม่มีการลงโทษ ถ้าเหนื่อยแค่พักให้ครบก็กลับมามีแรง</p><div id="pet-box"><div class="card" style="margin-top:14px"><p class="muted">กำลังโหลด…</p></div></div>`; }
+function paintPet() {
+  const box = $('#pet-box'); if (!box || !A.pet) return;
+  const d = A.pet, p = d.pet, pr = A.profile;
+  const type = d.petType || pr.petType;
+  if (!type) {
+    A.petPick = A.petPick || 'cat';
+    box.innerHTML = `<div class="card" style="margin-top:14px"><h3>เลือกเพื่อนใหม่ของคุณ</h3><p class="muted">เลือกชนิดและตั้งชื่อ เปลี่ยนได้ภายหลัง แต้มที่สะสมไว้จะไม่หาย</p>
+     <div class="seg">${Object.keys(PETS).map(k => `<button class="opt ${A.petPick === k ? 'on' : ''}" data-act="petPick" data-k="${k}" style="text-align:center"><div style="display:flex;justify-content:center">${petSvg(k, 1, 'happy', 84)}</div><b>${PETS[k].label}</b></button>`).join('')}</div>
+     <label class="fl" for="pet-name">ชื่อสัตว์เลี้ยง (1–12 ตัวอักษร)</label><input type="text" id="pet-name" maxlength="12" placeholder="เช่น มะม่วง" value="${esc(A.petNameDraft || '')}">
+     <div class="mbtns"><button class="btn primary" data-act="petAdopt">รับเลี้ยง</button></div></div>`;
+    return;
+  }
+  const t = p.today, goalPct = clamp01(Math.round(t.workMin / Math.max(1, t.goalMin) * 100));
+  box.innerHTML = `<div class="card" style="margin-top:14px;text-align:center">
+    <div style="display:flex;justify-content:center">${petSvg(type, p.stage, p.mood, 190)}</div>
+    <h2 style="margin:6px 0 2px">${esc(d.petName || PETS[type].label)}</h2>
+    <div><span class="chip">${esc(p.stageName)}</span> <span class="chip gray">${petMoodText(p.mood)}</span>${p.streak > 1 ? ` <span class="chip gray">🔥 ต่อเนื่อง ${p.streak} วัน</span>` : ''}</div>
+    <p style="margin:12px 0 4px">${esc(p.tip)}</p>
+    <div style="text-align:left;margin-top:14px"><b>การเติบโต</b>${petBar(p)}</div>
+    <div style="text-align:left;margin-top:14px"><b>ความสุข</b> <span class="muted">${p.happiness}/100 (ดูจาก 3 วันล่าสุด)</span><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p.happiness}"><i style="width:${clamp01(p.happiness)}%"></i></div></div>
+   </div>
+   <div class="card" style="margin-top:14px"><h3>วันนี้</h3>
+    <div class="switch"><div><b>เวลาทำงาน</b><br><span class="muted">เป้าหมาย ${t.goalMin} นาที</span></div><b>${t.workMin} นาที</b></div>
+    <div class="bar" style="margin:4px 0 10px"><i style="width:${goalPct}%"></i></div>
+    <div class="switch"><div><b>เวลาพัก</b></div><b>${t.restMin} นาที</b></div>
+    <div class="switch"><div><b>กิจกรรมพักที่ทำสำเร็จ</b></div><b>${t.activities} ครั้ง</b></div></div>
+   <div class="card" style="margin-top:14px"><h3>แต้มมาจากไหน</h3>
+    <div class="switch"><div><b>ทำงาน</b><br><span class="muted">ทุก 5 นาที = 1 แต้ม (นับสูงสุด 8 ชม./วัน)</span></div><b>${p.breakdown.work}</b></div>
+    <div class="switch"><div><b>พักจริง</b><br><span class="muted">นาทีละ 2 แต้ม ไม่เกินแต้มทำงานของวันนั้น</span></div><b>${p.breakdown.rest}</b></div>
+    <div class="switch"><div><b>กิจกรรมพักที่ทำสำเร็จ</b><br><span class="muted">ครั้งละ 5 แต้ม (สูงสุด 10 ครั้ง/วัน)</span></div><b>${p.breakdown.activity}</b></div>
+    <p class="muted" style="margin-top:10px">แต้มคำนวณจากเวลาจริงที่บันทึกไว้ในระบบ การปล่อยตัวจับเวลาทิ้งไว้เฉย ๆ จึงไม่ช่วยให้โตเร็วขึ้น</p></div>
+   <div class="card" style="margin-top:14px"><h3>เปลี่ยนชนิด/ชื่อ</h3>
+    <div class="seg">${Object.keys(PETS).map(k => `<button class="opt ${(A.petPick || type) === k ? 'on' : ''}" data-act="petPick" data-k="${k}" style="text-align:center"><b>${PETS[k].label}</b></button>`).join('')}</div>
+    <label class="fl" for="pet-name">ชื่อ</label><input type="text" id="pet-name" maxlength="12" value="${esc(A.petNameDraft !== undefined ? A.petNameDraft : d.petName)}">
+    <div class="mbtns"><button class="btn" data-act="petAdopt">บันทึก</button></div></div>`;
+}
 
 /* ---------- Dashboard ---------- */
 function actCard(a) {
@@ -471,6 +614,7 @@ function vDashboard() {
     <div class="card stat"><small>พักครั้งถัดไปประมาณ</small><b id="st-next">—</b></div>
     <div class="card stat span2"><small>เป้าหมายวันนี้ (<span id="st-goaltxt"></span>)</small><div class="bar"><i id="st-goal" style="width:0"></i></div></div>
    </div>
+   <div class="card span2" id="pet-mini" style="padding:14px 18px"></div>
    <div class="card span2">
     <div class="sec" style="margin-top:0"><h3>${inBreak ? 'เลือกกิจกรรมพักของคุณ' : 'กิจกรรมที่แนะนำสำหรับ ' + esc(o.label)}</h3><button class="btn sm" data-act="nav" data-v="break">ดูทั้งหมด</button></div>
     <div class="acards">${A.recommended.map(actCard).join('') || '<p class="muted">ยังไม่มีกิจกรรมแนะนำ</p>'}</div>
@@ -863,6 +1007,7 @@ function vSettings() {
    <div class="switch"><div><b>ช่วงเวลาเงียบ</b><br><span class="muted">ไม่มีเสียง/แจ้งเตือนเบราว์เซอร์ในช่วงนี้</span></div>${tog('pf-quiet', A.prefs.quiet)}</div>
    <div class="row" style="margin-top:8px"><div><label class="fl" for="qf">ตั้งแต่</label><input type="time" id="qf" value="${A.prefs.quietFrom}" data-in="quiet"></div><div><label class="fl" for="qt">ถึง</label><input type="time" id="qt" value="${A.prefs.quietTo}" data-in="quiet"></div></div>
    <div class="note warn" style="margin-top:12px">${IN_GAS ? '<b>หมายเหตุ:</b> คุณเปิดผ่านหน้า Web App ของ Google ซึ่งบล็อกการแจ้งเตือนของเบราว์เซอร์ — โฮสต์หน้านี้เองเพื่อเปิดใช้ฟีเจอร์นี้ (ดูคู่มือ)<br>' : ''}<b>ข้อจำกัดที่ควรรู้:</b> เมื่อปิดแท็บหรือเบราว์เซอร์ (หรือมือถือล็อกหน้าจอ) ตัวนับและการแจ้งเตือนอาจหยุดทำงาน แต่เมื่อกลับมา Re:focus จะคำนวณเวลาจริงจากเวลาของเซิร์ฟเวอร์ให้ถูกต้อง</div></div>
+  <div class="card" style="margin-top:14px"><h3>เครื่องมือเสริม</h3><p class="muted">เครื่องมือเล็ก ๆ ที่ไม่เกี่ยวกับการพัก</p><div class="mbtns"><button class="btn" data-act="nav" data-v="bill">🧾 หารบิล</button></div></div>
   <div class="card" style="margin-top:14px"><h3>บัญชี</h3><label class="fl" for="em">อีเมล (ไม่บังคับ — ใช้ติดต่อเรื่องแบบประเมินเท่านั้น)</label><input type="email" id="em" value="${esc(p.email)}" placeholder="you@example.com">
    <div class="mbtns"><button class="btn" data-act="saveEmail">บันทึกอีเมล</button></div>
    <h3 style="margin-top:18px">รหัสบัญชีสำรอง</h3><p class="muted">ใช้กู้คืนบัญชีเมื่อเปลี่ยนเครื่องหรือล้างข้อมูลเบราว์เซอร์ เก็บเป็นความลับ</p><button class="btn sm" data-act="copyCode">คัดลอกรหัสสำรอง</button>
@@ -897,6 +1042,19 @@ function paintAdmin(d) {
  * Actions (event delegation)
  * ===================================================================== */
 const ACT = {
+  petReload: () => { A.pet = null; loadPet(); },
+  petPick: el => { const n = $('#pet-name'); if (n) A.petNameDraft = n.value; A.petPick = el.dataset.k; paintPet(); },
+  petAdopt: el => run(el, async () => {
+    const name = ($('#pet-name').value || '').trim(), type = A.petPick || (A.pet && A.pet.petType) || A.profile.petType || 'cat';
+    if (!name) { toast('ตั้งชื่อให้สัตว์เลี้ยงก่อนนะ', { type: 'err' }); return; }
+    const r = await rpc('saveUserProfile', au(), { petType: type, petName: name }); A.profile = r.profile; A.pet = null; A.petPick = null; A.petNameDraft = undefined;
+    toast('บันทึกแล้ว', { type: 'ok' }); await loadPet();
+  }),
+  billSet: el => { if (!A.bill) A.bill = BILL0(); const k = el.dataset.k, v = el.dataset.v; A.bill[k] = k === 'svc' ? +v : (k === 'vat' || k === 'round') ? v === 'true' : v; rerender(); },
+  billAdd: () => { if (A.bill.items.length < 20) A.bill.items.push({ name: '', amt: '' }); rerender(); },
+  billDel: el => { if (A.bill.items.length > 1) A.bill.items.splice(+el.dataset.i, 1); rerender(); },
+  billReset: () => { A.bill = BILL0(); rerender(); },
+  billCopy: () => { const t = billText(); (navigator.clipboard ? navigator.clipboard.writeText(t).then(() => toast('คัดลอกแล้ว', { type: 'ok' })).catch(() => prompt('คัดลอกข้อความนี้', t)) : prompt('คัดลอกข้อความนี้', t)); },
   nav: (el, e) => { e.preventDefault(); go(el.dataset.v); },
   closeModal: () => closeModal(),
   goPlan: () => { closeModal(); go('plan'); },
@@ -978,6 +1136,7 @@ const ACT = {
   adminPlan: el => run(el, async () => { A.adminKey = $('#ak').value; const r = await rpc('updateUserPlan', A.adminKey, $('#au-id').value, $('#au-plan').value, +$('#au-days').value || 0); toast('อัปเดตแพ็กเกจของ ' + r.userId + ' แล้ว', { type: 'ok' }); })
 };
 document.addEventListener('click', e => { const t = e.target.closest('[data-act]'); if (!t) return; const f = ACT[t.dataset.act]; if (f) f(t, e); });
+document.addEventListener('input', e => { const t = e.target; if (!t.dataset || t.dataset.in !== 'bill' || !A.bill) return; if (t.dataset.f) A.bill.items[+t.dataset.i][t.dataset.f] = t.value; else A.bill[t.dataset.k] = t.value; paintBill(); });
 document.addEventListener('change', e => { if (e.target.dataset && e.target.dataset.in === 'quiet') { A.prefs.quietFrom = $('#qf').value || '22:00'; A.prefs.quietTo = $('#qt').value || '07:00'; savePrefs(); } });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#modal').classList.contains('open')) closeModal(); });
 window.addEventListener('error', ev => { console.error(ev.message); });
