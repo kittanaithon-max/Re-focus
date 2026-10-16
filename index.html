@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Re:focus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700&family=Noto+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--p:#5B8DEF;--pd:#3F6FD1;--soft:#EAF2FF;--soft2:#DCE8FF;--bg:#F7F9FC;--w:#fff;--tx:#27364B;--tx2:#7B8798;--ok:#4CAF87;--okbg:#E5F5EE;--warn:#E8A33D;--warnbg:#FFF4E0;--err:#D9605C;--errbg:#FDECEB;--line:#E3EAF4;--ink:#14203A;--sh:0 2px 10px rgba(39,54,75,.07);--r:18px}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--tx);font-family:'Noto Sans Thai',system-ui,sans-serif;line-height:1.55;-webkit-text-size-adjust:100%}
+body.noscroll{overflow:hidden}
+h1,h2,h3{font-family:'Prompt','Noto Sans Thai',sans-serif;margin:0;color:var(--ink);line-height:1.3}
+h1{font-size:26px}h2{font-size:20px}h3{font-size:16px}
+p{margin:0 0 8px}
+button{font-family:inherit;font-size:15px;cursor:pointer}
+.brand{font-family:'Prompt',sans-serif;font-weight:600;font-size:24px;letter-spacing:-.2px;white-space:nowrap}
+.brand b{color:var(--ink);font-weight:600}.brand span{color:var(--p)}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 20px;border-radius:14px;border:1.5px solid var(--line);background:var(--w);color:var(--tx);font-weight:500;transition:.15s;position:relative}
+.btn:hover{border-color:var(--p);color:var(--pd)}
+.btn:active{transform:translateY(1px) scale(.99)}
+.btn.primary{background:var(--p);border-color:var(--p);color:#fff}
+.btn.primary:hover{background:var(--pd);border-color:var(--pd);color:#fff}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--tx2)}
+.btn.sm{min-height:36px;padding:0 14px;font-size:14px;border-radius:12px}
+.btn:disabled,.btn.disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn.loading{color:transparent!important;pointer-events:none}
+.btn.loading::after{content:"";position:absolute;width:18px;height:18px;border:2.5px solid rgba(120,140,170,.4);border-top-color:var(--p);border-radius:50%;animation:spin .7s linear infinite}
+.btn.primary.loading::after,.btn.ok.loading::after{border-color:rgba(255,255,255,.5);border-top-color:#fff}
+@keyframes spin{to{transform:rotate(360deg)}}
+.btn:focus-visible,.acard:focus-visible,.opt:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid rgba(91,141,239,.45);outline-offset:2px}
+
+/* layout */
+.shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+.side{background:var(--w);border-right:1px solid var(--line);padding:22px 16px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:6px}
+.side .brand{padding:0 10px 18px}
+.nav{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:14px;border:0;background:none;color:var(--tx2);font-weight:500;text-align:left;width:100%}
+.nav:hover{background:var(--soft);color:var(--pd)}
+.nav.on{background:var(--soft);color:var(--pd)}
+.nav i{font-style:normal;font-size:19px;width:24px;text-align:center}
+.side .grow{flex:1}
+.planbox{background:var(--soft);border-radius:16px;padding:14px;font-size:14px}
+main{padding:28px 32px 48px;max-width:1120px;width:100%;margin:0 auto}
+.bottom{display:none}
+.card{background:var(--w);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:22px}
+.card h3{margin-bottom:10px}
+.muted{color:var(--tx2);font-size:14px}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.hello{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:20px}
+.hello p{color:var(--tx2);margin-top:4px}
+.chip{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;background:var(--soft);color:var(--pd);border-radius:999px;padding:4px 12px;font-size:13px;font-weight:500}
+.chip.ok{background:var(--okbg);color:#2f8a65}.chip.warn{background:var(--warnbg);color:#a86a10}.chip.gray{background:#EEF1F6;color:var(--tx2)}
+.badge{display:inline-block;border-radius:8px;padding:1px 8px;font-size:12px;font-weight:600}
+.badge.free{background:var(--okbg);color:#2f8a65}.badge.premium{background:#FFF1D6;color:#a86a10}
+.grid-dash{display:grid;grid-template-columns:1.1fr 1fr;gap:18px}
+.span2{grid-column:1/-1}
+.timer-card{text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px;padding:28px 22px}
+.ringwrap{position:relative;width:240px;height:240px}
+.ringwrap svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ringwrap .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#t-time{font-family:'Prompt',sans-serif;font-weight:600;font-size:46px;color:var(--ink);font-variant-numeric:tabular-nums}
+#t-label{color:var(--tx2);font-size:15px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-content:start}
+.stat{padding:18px}
+.stat small{display:block;color:var(--tx2);font-size:13px}
+.stat b{display:block;font-family:'Prompt',sans-serif;font-size:24px;color:var(--ink);margin-top:2px}
+.bar{height:10px;background:var(--soft);border-radius:99px;overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;background:var(--p);border-radius:99px;transition:width .6s}
+.acards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.acard{background:var(--w);border:1.5px solid var(--line);border-radius:16px;padding:16px;text-align:left;display:flex;flex-direction:column;gap:6px;transition:.15s;color:var(--tx)}
+.acard:hover{border-color:var(--p);box-shadow:var(--sh);transform:translateY(-1px)}
+.acard.locked{background:#FAFBFD}
+.acard .ic{font-size:28px}
+.acard b{font-family:'Prompt',sans-serif;font-weight:500;color:var(--ink)}
+.acard small{color:var(--tx2);font-size:13px}
+.acard .why{color:var(--pd);font-size:12.5px}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.filters .btn{min-height:36px;padding:0 14px;font-size:14px;border-radius:99px}
+.filters .btn.on{background:var(--soft);border-color:var(--p);color:var(--pd)}
+.sec{margin:26px 0 12px;display:flex;justify-content:space-between;align-items:center}
+.breakpanel{background:linear-gradient(180deg,var(--okbg),#fff);border-color:#cfe8dc}
+
+/* forms */
+label.fl{display:block;font-weight:500;margin:14px 0 6px}
+input[type=text],input[type=number],input[type=password],input[type=date],input[type=time],input[type=email],select,textarea{width:100%;min-height:44px;border:1.5px solid var(--line);border-radius:12px;padding:8px 12px;font:inherit;background:#fff;color:var(--tx)}
+textarea{min-height:90px;resize:vertical}
+.seg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.opt{border:1.5px solid var(--line);background:#fff;border-radius:14px;padding:12px 14px;text-align:left;color:var(--tx);transition:.15s}
+.opt:hover{border-color:var(--p)}
+.opt.on{border-color:var(--p);background:var(--soft);box-shadow:0 0 0 2px rgba(91,141,239,.2)}
+.opt.dis{opacity:.55;cursor:not-allowed}
+.opt small{display:block;color:var(--tx2);font-size:12.5px}
+.switch{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.switch:last-child{border-bottom:0}
+.tog{width:48px;height:28px;border-radius:99px;background:#CBD4E2;border:0;position:relative;transition:.2s;flex:none}
+.tog::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.tog.on{background:var(--p)}.tog.on::after{left:23px}
+.occgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.note{background:var(--soft);border-radius:14px;padding:12px 14px;font-size:14px;color:var(--tx)}
+.note.warn{background:var(--warnbg)}.note.err{background:var(--errbg);color:#8d2f2c}
+
+/* modal + toast */
+#modal{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;background:rgba(20,32,58,.45);padding:16px}
+#modal.open{display:flex}
+.mbox{background:#fff;border-radius:22px;max-width:520px;width:100%;max-height:92vh;overflow:auto;padding:26px;box-shadow:0 20px 60px rgba(20,32,58,.3);animation:pop .2s}
+@keyframes pop{from{transform:scale(.96);opacity:0}to{transform:none;opacity:1}}
+.mbox h2{margin-bottom:8px}
+.mico{font-size:44px;text-align:center}
+.mbtns{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+#toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;z-index:70;display:flex;flex-direction:column;gap:8px;width:min(92vw,460px)}
+.toast{background:var(--ink);color:#fff;border-radius:14px;padding:12px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;box-shadow:0 8px 24px rgba(20,32,58,.3);font-size:14.5px;animation:pop .2s}
+.toast.err{background:#8d2f2c}.toast.ok{background:#2a7a58}
+.toast button{background:rgba(255,255,255,.18);color:#fff;border:0;border-radius:10px;padding:6px 12px}
+
+/* runner */
+#runner{position:fixed;inset:0;z-index:40;background:var(--bg);display:none;flex-direction:column}
+#runner.open{display:flex}
+.run-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;background:#fff;border-bottom:1px solid var(--line)}
+.run-top h3{flex:1;text-align:center}
+#r-time{font-family:'Prompt',sans-serif;font-weight:600;font-size:20px;min-width:62px;text-align:right;font-variant-numeric:tabular-nums}
+.run-bar{height:6px;background:var(--soft)}.run-bar i{display:block;height:100%;width:0;background:var(--p);transition:width .25s linear}
+.run-body{flex:1;overflow:auto;padding:22px 16px;display:flex;justify-content:center}
+.run-in{width:100%;max-width:560px}
+.run-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:#fff;border-top:1px solid var(--line)}
+.gstat{text-align:center;color:var(--tx2);margin-bottom:12px;min-height:26px}
+.finish{text-align:center;padding-top:20px}
+.finish .big{font-size:56px}
+.stars{display:flex;gap:6px;justify-content:center;margin:12px 0}
+.stars button{font-size:28px;background:none;border:0;opacity:.35;padding:2px}
+.stars button.on{opacity:1}
+.breath{width:200px;height:200px;margin:6px auto 14px;position:relative;display:flex;align-items:center;justify-content:center}
+#b-circle{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,#cfe0ff,#9ebcf7);transform:scale(.55)}
+#b-text{position:relative;font-family:'Prompt',sans-serif;font-weight:500;color:var(--ink)}
+.g-step{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;text-align:center;margin-bottom:12px}
+.g-step small{color:var(--tx2)}.g-step p{font-size:19px;font-family:'Prompt',sans-serif;margin:4px 0 0}
+.g-list{padding-left:22px;color:var(--tx2);font-size:14.5px}.g-list li.cur{color:var(--ink);font-weight:600}.g-list li.done{text-decoration:line-through;opacity:.6}
+.safety{background:var(--warnbg);border-radius:12px;padding:10px 12px;font-size:14px;margin-top:10px}
+/* games */
+.memgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.mcard{aspect-ratio:1;border:0;border-radius:16px;background:var(--soft2);font-size:30px;color:var(--p);transition:.2s}
+.mcard.up{background:#fff;border:2px solid var(--p)}.mcard.ok{background:var(--okbg);border:2px solid var(--ok);opacity:.85}
+.seqgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:340px;margin:0 auto}
+.seqgrid button{aspect-ratio:1;border:0;border-radius:20px;background:var(--soft2)}
+.seqgrid button.lit{background:var(--p);box-shadow:0 0 0 4px rgba(91,141,239,.3)}
+.cword{font-family:'Prompt',sans-serif;font-size:54px;font-weight:700;text-align:center;margin:10px 0 18px}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opts .opt{text-align:center;font-weight:500}
+.opt.right{border-color:var(--ok);background:var(--okbg)}.opt.wrong{border-color:var(--err);background:var(--errbg)}
+.oddgrid{display:grid;gap:6px;max-width:380px;margin:0 auto}
+.oddgrid button{aspect-ratio:1;border:1px solid var(--line);background:#fff;border-radius:12px;font-size:26px;padding:0}
+.ordgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:340px;margin:0 auto}
+.ordgrid button{aspect-ratio:1.2;border:0;border-radius:16px;background:var(--soft2);font-family:'Prompt',sans-serif;font-size:26px;font-weight:600;color:var(--ink)}
+.ordgrid button.got{background:var(--okbg);color:#2f8a65;opacity:.6}.ordgrid button.bad{background:var(--errbg)}
+.qtxt{font-family:'Prompt',sans-serif;font-size:21px;text-align:center;margin:8px 0 18px;color:var(--ink)}
+.tiles{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:10px 0}
+.tile{border:1.5px solid var(--p);background:var(--soft);border-radius:12px;padding:8px 14px;font-size:17px}
+.slot{min-height:56px;border:2px dashed var(--line);border-radius:14px;padding:8px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center}
+.pairs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pairs .opt.sel{border-color:var(--p);background:var(--soft)}.pairs .opt.done{opacity:.35;pointer-events:none}
+.moods{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.moods button{font-size:34px;border:2px solid var(--line);background:#fff;border-radius:18px;padding:8px 12px}.moods button.on{border-color:var(--p);background:var(--soft)}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}.shake{animation:shake .25s}
+
+/* report */
+.cards4{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
+.rrow{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.hbar{height:10px;border-radius:99px;background:var(--soft);overflow:hidden;flex:1}.hbar i{display:block;height:100%;background:var(--p)}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line)}
+.lock{position:relative;filter:grayscale(.2)}
+.plans{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.plans ul{padding-left:20px;margin:10px 0;color:var(--tx)}
+.plans .cur{border:2px solid var(--p)}
+.hero{max-width:640px;margin:0 auto;padding:36px 18px}
+.center{text-align:center}
+
+@media (max-width:900px){
+ .shell{grid-template-columns:1fr}
+ .side{display:none}
+ main{padding:18px 16px 110px}
+ .bottom{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+ .bottom button{border:0;background:none;color:var(--tx2);display:flex;flex-direction:column;align-items:center;gap:0;padding:6px 2px;font-size:12px;min-height:52px;border-radius:12px}
+ .bottom button i{font-style:normal;font-size:21px}.bottom button.on{color:var(--pd);background:var(--soft)}
+ .grid-dash{grid-template-columns:1fr}
+ .acards{grid-template-columns:1fr}
+ .plans{grid-template-columns:1fr}
+ h1{font-size:23px}
+ .ringwrap{width:220px;height:220px}#t-time{font-size:40px}
+ #toasts{bottom:96px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="modal" role="dialog" aria-modal="true"></div>
+<div id="runner"></div>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+/* =====================================================================
+ * Re:focus — Frontend
+ * ===================================================================== */
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const rand = n => Math.floor(Math.random() * n);
+const shuffle = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = rand(i + 1);[a[i], a[j]] = [a[j], a[i]]; } return a; };
+const pad = n => String(Math.floor(n)).padStart(2, '0');
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)).replace(/-/g, '');
+const fmtClock = sec => { sec = Math.max(0, Math.ceil(sec)); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60; return (h ? h + ':' + pad(m) : pad(m)) + ':' + pad(s); };
+const fmtDur = sec => { const m = Math.round(sec / 60); if (m < 60) return m + ' นาที'; const h = Math.floor(m / 60); return h + ' ชม.' + (m % 60 ? ' ' + (m % 60) + ' นาที' : ''); };
+const mem = {};
+const store = {
+  get(k) { try { const v = localStorage.getItem(k); return v === null ? (mem[k] ?? null) : JSON.parse(v); } catch (e) { return mem[k] ?? null; } },
+  set(k, v) { mem[k] = v; try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } },
+  del(k) { delete mem[k]; try { localStorage.removeItem(k); } catch (e) { } }
+};
+
+const A = {
+  auth: store.get('rf_auth'), profile: null, planDef: null, settings: null, plans: null, occs: [], activities: [], recommended: [],
+  session: null, today: null, offset: 0, view: 'dashboard', report: null, filter: 'all', adminKey: '', adminData: null,
+  prefs: Object.assign({ sound: true, notify: false, quiet: false, quietFrom: '22:00', quietTo: '07:00' }, store.get('rf_prefs') || {}),
+  P: store.get('rf_phase') || { key: '', extra: 0, postponed: 0, alerted: false }, titleAlert: ''
+};
+const au = () => ({ userId: A.auth.userId, token: A.auth.token });
+const nowMs = () => Date.now() + A.offset;
+const occOf = k => A.occs.find(o => o.key === k) || { key: k, label: k, icon: '🌿', en: '' };
+const ICON = { move: '🤸', mind: '🌬️', game: '🎮', eyes: '👀', breathe: '🌬️', walk: '🚶', stretch: '🙆', relax: '😌', observe: '👁️', rest: '😴', quiet: '🔇', creative: '✏️', memory: '🃏', sequence: '🔢', color: '🎨', odd: '🔍', order: '🔢', logic: '🧩', wordlink: '🔗', wordorder: '📝', quiz: '❓', vocab: '📖', recall: '🧠', reflect: '💭' };
+const CAT = { move: 'Move & Stretch', mind: 'Mind Reset', game: 'Mini Games' };
+
+/* ---------- server calls ---------- */
+// เปิดผ่านหน้า Web App ของ Google → ใช้ google.script.run
+// โฮสต์หน้านี้เองนอก Google (GitHub Pages / Netlify) → วาง Web App URL (ลงท้าย /exec) ที่นี่
+const API_URL = window.__API_URL__ || 'https://script.google.com/macros/s/AKfycbwjHlWheE-bHPUl1g8ypIllBGRKk0NJBVIepzUrHYYjbvNEcarOGg7ocxEHUBtMYgqS0w/exec';
+const IN_GAS = !!(window.google && google.script && google.script.run);
+function rpcDone(r, resolve, reject) {
+  if (r && r.serverNow) A.offset = r.serverNow - Date.now();
+  if (r && r.ok === false) reject(Object.assign(new Error(r.error || 'เกิดข้อผิดพลาด'), { code: r.code })); else resolve(r);
+}
+function rpc(name, ...args) {
+  return new Promise((resolve, reject) => {
+    if (IN_GAS) {
+      google.script.run
+        .withSuccessHandler(r => rpcDone(r, resolve, reject))
+        .withFailureHandler(err => reject(Object.assign(new Error((err && err.message) || 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'), { code: 'NET' })))
+      [name](...args);
+      return;
+    }
+    if (!API_URL) { reject(Object.assign(new Error('ยังไม่ได้ตั้งค่า API_URL — วาง Web App URL ของ Apps Script ที่ต้นสคริปต์ใน index.html'), { code: 'NOGAS' })); return; }
+    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 30000);
+    fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: name, args }), redirect: 'follow', signal: ctl.signal })
+      .then(r => r.text())
+      .then(t => {
+        let r; try { r = JSON.parse(t); } catch (e) { throw Object.assign(new Error('เซิร์ฟเวอร์ตอบกลับไม่ถูกต้อง — ตรวจสอบว่า Deploy เป็น Web App แบบ Who has access: Anyone และใช้ URL ที่ลงท้าย /exec'), { code: 'NET' }); }
+        rpcDone(r, resolve, reject);
+      })
+      .catch(e => reject(e.code ? e : Object.assign(new Error(e.name === 'AbortError' ? 'เซิร์ฟเวอร์ตอบช้าเกินไป กรุณาลองอีกครั้ง' : 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองอีกครั้ง'), { code: 'NET' })))
+      .finally(() => clearTimeout(to));
+  });
+}
+let SW_READY = false;
+if (!IN_GAS && 'serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').then(() => navigator.serviceWorker.ready).then(() => { SW_READY = true; }).catch(() => { });
+function fail(e) {
+  if (e && e.code === 'AUTH') { store.del('rf_auth'); A.auth = null; toast(e.message, { type: 'err' }); boot(); return; }
+  toast(e && e.message ? e.message : 'เกิดข้อผิดพลาด', { type: 'err' });
+}
+async function run(btn, fn) {
+  if (btn && (btn.disabled || btn.classList.contains('loading'))) return;
+  if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+  try { await fn(); } catch (e) { fail(e); } finally { if (btn) { btn.classList.remove('loading'); btn.disabled = false; } }
+}
+
+/* ---------- toast / modal ---------- */
+function toast(msg, o = {}) {
+  const el = document.createElement('div'); el.className = 'toast ' + (o.type || '');
+  el.innerHTML = `<span>${esc(msg)}</span>${o.action ? `<button>${esc(o.label || 'ลองอีกครั้ง')}</button>` : ''}`;
+  if (o.action) $('button', el).onclick = () => { el.remove(); o.action(); };
+  $('#toasts').appendChild(el);
+  if (!o.sticky) setTimeout(() => el.remove(), o.ms || 5200);
+  return el;
+}
+function openModal(html) { const m = $('#modal'); m.innerHTML = `<div class="mbox">${html}</div>`; m.classList.add('open'); }
+function closeModal() { $('#modal').classList.remove('open'); $('#modal').innerHTML = ''; A.titleAlert = ''; }
+
+/* =====================================================================
+ * Timer model — คำนวณจาก timestamp ของ Server ทุกครั้ง
+ * ===================================================================== */
+function cfg() {
+  const s = A.settings, p = A.profile; let w = s.standardWorkMin, b = s.standardBreakMin;
+  if (p.mode === 'long') { w = s.longWorkMin; b = s.longBreakMin; }
+  else if (p.mode === 'custom' && A.planDef.allowCustomTimer) { w = p.customWorkMin; b = p.customBreakMin; }
+  return { w, b };
+}
+const phaseType = s => (s.status === 'paused' ? (s.prevStatus || 'working') : s.status) === 'break' ? 'break' : 'working';
+function live() {
+  const s = A.session; if (!s) return null;
+  let e = s.status === 'working' || s.status === 'break' ? Math.max(0, (nowMs() - s.segmentStartMs) / 1000) : 0;
+  return { w: s.workSec + (s.status === 'working' ? e : 0), b: s.breakSec + (s.status === 'break' ? e : 0), p: s.phaseSec + e, e };
+}
+function syncPhase() {
+  const s = A.session; if (!s) return;
+  const key = [s.sessionId, s.cycles, s.breakCount, phaseType(s)].join(':');
+  if (A.P.key !== key) { A.P = { key, extra: 0, postponed: 0, alerted: false }; store.set('rf_phase', A.P); }
+}
+function savePhase() { store.set('rf_phase', A.P); }
+function applySession(r) {
+  const s = r.session;
+  A.session = s && (s.status === 'working' || s.status === 'paused' || s.status === 'break') ? s : null;
+  if (r.today) A.today = r.today;
+  if (A.session) syncPhase();
+}
+
+/* =====================================================================
+ * Alerts
+ * ===================================================================== */
+function isQuiet() {
+  if (!A.prefs.quiet) return false;
+  const d = new Date(), m = d.getHours() * 60 + d.getMinutes(), f = A.prefs.quietFrom.split(':').map(Number), t = A.prefs.quietTo.split(':').map(Number);
+  const a = f[0] * 60 + f[1], b = t[0] * 60 + t[1];
+  return a <= b ? (m >= a && m < b) : (m >= a || m < b);
+}
+function beep() {
+  try {
+    const C = new (window.AudioContext || window.webkitAudioContext)();
+    [0, .28].forEach((d, i) => { const o = C.createOscillator(), g = C.createGain(); o.frequency.value = i ? 660 : 880; o.connect(g); g.connect(C.destination); const t = C.currentTime + d; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.15, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + .24); o.start(t); o.stop(t + .26); });
+  } catch (e) { }
+}
+function notify(title, body) {
+  A.titleAlert = '⏰ ' + title;
+  if (isQuiet()) return;
+  if (A.prefs.sound) beep();
+  try {
+    if (A.prefs.notify && 'Notification' in window && Notification.permission === 'granted') {
+      if (SW_READY) navigator.serviceWorker.ready.then(r => r.showNotification(title, { body, tag: 'refocus', renotify: true })).catch(() => { try { new Notification(title, { body }); } catch (e) { } });
+      else new Notification(title, { body });
+    }
+  } catch (e) { }
+}
+function logChoice(choice) {
+  const p = { clientRequestId: uid(), kind: 'choice', choice, sessionId: A.session ? A.session.sessionId : '' };
+  rpc('saveActivityLog', au(), p).catch(e => toast('บันทึกการเลือกไม่สำเร็จ: ' + e.message, { type: 'err', label: 'ลองส่งอีกครั้ง', action: () => rpc('saveActivityLog', au(), p).catch(() => { }) }));
+}
+function checkAlerts() {
+  const s = A.session; if (!s || s.status === 'paused' || R) return;
+  syncPhase(); const L = live();
+  if (s.status === 'working' && !A.P.alerted && L.p >= cfg().w * 60 + A.P.extra) { A.P.alerted = true; savePhase(); onWorkDue(); }
+  else if (s.status === 'break' && !A.P.alerted && L.p >= cfg().b * 60) { A.P.alerted = true; savePhase(); onBreakDue(); }
+}
+function onWorkDue() {
+  const L = live(), left = A.settings.maxPostpones - A.P.postponed;
+  notify('ถึงเวลาพักสายตาสักครู่แล้ว', 'ทำงานต่อเนื่องมา ' + fmtDur(L.p) + ' แล้ว');
+  openModal(`<div class="mico">☕</div><h2 class="center">ถึงเวลาพักสายตาสักครู่แล้ว</h2>
+  <p class="center muted">คุณทำงานต่อเนื่องมา ${esc(fmtDur(L.p))} การพักสั้น ๆ ตอนนี้ช่วยให้กลับมาทำงานได้สบายขึ้น</p>
+  <div class="mbtns"><button class="btn primary" data-act="takeBreak">พักเลย</button>
+  <button class="btn" data-act="postpone" ${left <= 0 ? 'disabled' : ''}>เลื่อนไป ${A.settings.postponeMin} นาที ${left > 0 ? '(เหลือ ' + left + ' ครั้ง)' : '(ครบจำนวนแล้ว)'}</button>
+  <button class="btn ghost" data-act="skipRound">ข้ามรอบนี้</button></div>`);
+}
+function onBreakDue() {
+  notify('หมดเวลาพักแล้ว', 'พร้อมกลับไปทำงานต่อหรือยัง?');
+  openModal(`<div class="mico">✨</div><h2 class="center">หมดเวลาพักแล้ว</h2><p class="center muted">พร้อมกลับไปทำงานต่อหรือยัง?</p>
+  <div class="mbtns"><button class="btn primary" data-act="backToWork">กลับไปทำงาน</button><button class="btn ghost" data-act="closeModal">ขอพักต่ออีกสักครู่</button></div>`);
+}
+
+/* =====================================================================
+ * Boot / onboarding
+ * ===================================================================== */
+function applyInit(r) {
+  A.occs = r.occupations; A.plans = r.plans; A.settings = r.settings;
+  if (r.profile) {
+    A.profile = r.profile; A.planDef = r.planDef; A.activities = r.activities; A.recommended = r.recommended;
+    A.session = r.session && ['working', 'paused', 'break'].includes(r.session.status) ? r.session : null; A.today = r.today; syncPhase();
+  }
+}
+async function boot() {
+  $('#root').innerHTML = `<div class="hero center"><div class="brand" style="font-size:34px"><b>Re:</b><span>focus</span></div><p class="muted" style="margin-top:18px">กำลังเตรียมพื้นที่ทำงานของคุณ…</p></div>`;
+  try {
+    const r = await rpc('getInitialData', A.auth ? au() : null);
+    applyInit(r);
+    if (r.needsRegister || !A.auth) { renderOnboarding(); return; }
+    renderShell(); go(A.view);
+    startTick();
+  } catch (e) {
+    if (e.code === 'AUTH') { store.del('rf_auth'); A.auth = null; return boot(); }
+    $('#root').innerHTML = `<div class="hero center"><div class="brand" style="font-size:34px"><b>Re:</b><span>focus</span></div>
+      <div class="note err" style="margin:22px 0;text-align:left"><b>เปิดระบบไม่สำเร็จ</b><br>${esc(e.message)}</div>
+      <button class="btn primary" onclick="boot()">ลองอีกครั้ง</button></div>`;
+  }
+}
+function renderOnboarding() {
+  const free = A.plans.Free.allowedOccupations;
+  const okOcc = o => free === 'ALL' || free.includes(o.key);
+  $('#root').innerHTML = `<div class="hero">
+   <div class="center"><div class="brand" style="font-size:38px"><b>Re:</b><span>focus</span></div>
+   <h1 style="margin-top:12px">พักให้ตรงจุด แล้วกลับไปโฟกัสได้ดีขึ้น</h1>
+   <p class="muted">จับเวลาทำงาน เตือนให้พัก และเลือกกิจกรรมพักที่เหมาะกับสายงานของคุณ</p></div>
+   <div class="card" style="margin-top:22px"><h3>1) คุณทำงานสายไหน?</h3>
+   <div class="occgrid" id="ob-occ">${A.occs.map(o => `<button class="opt ${okOcc(o) ? '' : 'dis'}" data-act="obPick" data-k="${o.key}" ${okOcc(o) ? '' : 'aria-disabled="true"'}>${o.icon} <b>${esc(o.label)}</b><small>${okOcc(o) ? '&nbsp;' : '🔒 ใช้ได้กับ Premium'}</small></button>`).join('')}</div>
+   <p class="muted" style="margin-top:10px">เปลี่ยนสายงานภายหลังได้ที่หน้าตั้งค่า</p>
+   <h3 style="margin-top:18px">2) ความเป็นส่วนตัว</h3>
+   <div class="note">Re:focus เก็บเฉพาะข้อมูลที่จำเป็น: สายงาน เวลาทำงาน/พัก กิจกรรมที่ทำ และคำตอบแบบประเมิน โดยใช้รหัสผู้ใช้แบบสุ่ม ไม่ต้องใช้ชื่อหรืออีเมล ข้อมูลใช้เพื่อปรับปรุงผลิตภัณฑ์เท่านั้น และไม่แสดงข้อมูลรายบุคคลในรายงานสาธารณะ</div>
+   <div class="mbtns"><button class="btn primary" id="ob-go" data-act="obStart" disabled>เริ่มใช้ Re:focus</button></div></div>
+   <div class="card" style="margin-top:14px"><h3>มีรหัสบัญชีสำรองอยู่แล้ว?</h3><div class="row"><input type="text" id="ob-code" placeholder="วางรหัสบัญชีสำรองที่นี่" style="flex:1;min-width:200px"><button class="btn" data-act="obRestore">กู้คืนบัญชี</button></div></div>
+  </div>`;
+  A.obOcc = '';
+}
+
+/* =====================================================================
+ * Shell & navigation
+ * ===================================================================== */
+const NAV = [['dashboard', '🏠', 'หน้าหลัก'], ['break', '🧘', 'กิจกรรมพัก'], ['report', '📊', 'รายงาน'], ['plan', '⭐', 'แพ็กเกจ'], ['settings', '⚙️', 'ตั้งค่า']];
+function renderShell() {
+  $('#root').innerHTML = `<div class="shell"><aside class="side"><div class="brand"><b>Re:</b><span>focus</span></div>
+   ${NAV.map(n => `<button class="nav" data-act="nav" data-v="${n[0]}"><i>${n[1]}</i>${n[2]}</button>`).join('')}<div class="grow"></div>
+   <div class="planbox" id="planbox"></div></aside>
+   <main id="view"></main>
+   <nav class="bottom" aria-label="เมนูหลัก">${NAV.map(n => `<button data-act="nav" data-v="${n[0]}"><i>${n[1]}</i>${n[2]}</button>`).join('')}</nav></div>`;
+}
+function go(v) {
+  A.view = v;
+  $$('[data-act="nav"]').forEach(b => b.classList.toggle('on', b.dataset.v === v || (v === 'admin' && b.dataset.v === 'settings')));
+  const pb = $('#planbox');
+  if (pb) pb.innerHTML = `แพ็กเกจของคุณ<br><span class="badge ${A.profile.plan === 'Premium' ? 'premium' : 'free'}">${esc(A.profile.plan)}</span> ${A.profile.plan === 'Free' ? '<a href="#" data-act="nav" data-v="plan" style="color:var(--pd);font-size:13px">อัปเกรด</a>' : ''}`;
+  const view = $('#view'); if (!view) return;
+  const f = { dashboard: vDashboard, break: vBreak, report: vReport, plan: vPlan, settings: vSettings, admin: vAdmin }[v] || vDashboard;
+  view.innerHTML = f();
+  window.scrollTo(0, 0);
+  if (v === 'dashboard') paintTimer();
+  if (v === 'report') loadReport();
+}
+const rerender = () => go(A.view);
+
+/* ---------- Dashboard ---------- */
+function actCard(a) {
+  const tags = `<span class="badge ${a.tier === 'Free' ? 'free' : 'premium'}">${a.tier}</span>${a.screenFree ? '<span class="chip gray" style="padding:1px 8px;font-size:12px">ไม่ใช้หน้าจอ</span>' : ''}`;
+  return `<button class="acard ${a.locked ? 'locked' : ''}" data-act="openAct" data-id="${esc(a.id)}">
+   <span class="ic">${ICON[a.gameKey || a.type] || ICON[a.category] || '✨'}</span><b>${a.locked ? '🔒 ' : ''}${esc(a.name)}</b>
+   <small>${esc(CAT[a.category] || '')} · ${fmtDur(a.durationSec)}</small><div class="tags">${tags}</div>
+   ${a.reason ? `<span class="why">${esc(a.reason)}</span>` : `<small>${esc(a.description)}</small>`}</button>`;
+}
+function timerButtons() {
+  const s = A.session;
+  if (!s) return `<button class="btn primary" data-act="start">▶ เริ่มงาน</button>`;
+  if (s.status === 'paused') return `<button class="btn primary" data-act="resume">▶ ทำงานต่อ</button><button class="btn" data-act="finish">■ จบงาน</button>`;
+  if (s.status === 'break') return `<button class="btn ok" data-act="backToWork">กลับไปทำงาน</button><button class="btn" data-act="pause">⏸ หยุดชั่วคราว</button><button class="btn" data-act="finish">■ จบงาน</button>`;
+  return `<button class="btn" data-act="pause">⏸ หยุดชั่วคราว</button><button class="btn primary" data-act="takeBreak">☕ พักตอนนี้</button><button class="btn" data-act="finish">■ จบงาน</button>`;
+}
+function vDashboard() {
+  const p = A.profile, o = occOf(p.occupation), s = A.session, inBreak = s && phaseType(s) === 'break' && s.status !== 'paused';
+  const dateStr = new Date(nowMs()).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  return `<section class="hello"><div><h1>สวัสดี 👋</h1><p>${esc(dateStr)} · ${o.icon} ${esc(o.label)}</p></div><span class="chip" id="st-chip"></span></section>
+  <div class="grid-dash">
+   <div class="card timer-card ${inBreak ? 'breakpanel' : ''}">
+    <div class="ringwrap"><svg viewBox="0 0 240 240" aria-hidden="true"><circle cx="120" cy="120" r="108" fill="none" stroke="#EAF2FF" stroke-width="14"/><circle id="t-ring" cx="120" cy="120" r="108" fill="none" stroke="#5B8DEF" stroke-width="14" stroke-linecap="round" stroke-dasharray="678.6" stroke-dashoffset="678.6"/></svg>
+     <div class="mid"><div id="t-time" role="timer">--:--</div><div id="t-label"></div></div></div>
+    <div class="muted" id="t-sub"></div>
+    <div class="actions" id="t-actions">${timerButtons()}</div>
+   </div>
+   <div class="stats">
+    <div class="card stat"><small>เวลาทำงานวันนี้</small><b id="st-work">0 นาที</b></div>
+    <div class="card stat"><small>รอบทำงาน / ครั้งที่พัก</small><b id="st-cycles">0 / 0</b></div>
+    <div class="card stat"><small>เวลาพักวันนี้</small><b id="st-break">0 นาที</b></div>
+    <div class="card stat"><small>พักครั้งถัดไปประมาณ</small><b id="st-next">—</b></div>
+    <div class="card stat span2"><small>เป้าหมายวันนี้ (<span id="st-goaltxt"></span>)</small><div class="bar"><i id="st-goal" style="width:0"></i></div></div>
+   </div>
+   <div class="card span2">
+    <div class="sec" style="margin-top:0"><h3>${inBreak ? 'เลือกกิจกรรมพักของคุณ' : 'กิจกรรมที่แนะนำสำหรับ ' + esc(o.label)}</h3><button class="btn sm" data-act="nav" data-v="break">ดูทั้งหมด</button></div>
+    <div class="acards">${A.recommended.map(actCard).join('') || '<p class="muted">ยังไม่มีกิจกรรมแนะนำ</p>'}</div>
+    <p class="muted" style="margin-top:10px">${A.planDef.allowPersonalized ? 'แนะนำจากสายงาน กิจกรรมที่เพิ่งทำ และคะแนนที่คุณให้' : 'แนะนำตามสายงานและหมุนเวียนไม่ให้ซ้ำ — Premium ปรับตามพฤติกรรมและคะแนนของคุณได้'}</p>
+   </div>
+   <div class="card span2 row" style="justify-content:space-between"><div><h3>จบวันแล้วใช่ไหม?</h3><p class="muted" style="margin:0">บอกเราว่าวันนี้ Re:focus ช่วยให้คุณกลับมาโฟกัสได้หรือไม่</p></div><button class="btn" data-act="openFeedback">ประเมินวันนี้</button></div>
+  </div>`;
+}
+function paintTimer() {
+  const tt = $('#t-time'); if (!tt) return;
+  const s = A.session, c = cfg(), ring = $('#t-ring'), C = 678.6;
+  let label = 'ยังไม่ได้เริ่ม', time = fmtClock(c.w * 60), prog = 0, sub = 'กด "เริ่มงาน" เพื่อเริ่มจับเวลา', chip = ['ยังไม่ได้เริ่ม', 'gray'], color = '#5B8DEF', next = '—';
+  let workSec = A.today ? A.today.workSec : 0, breakSec = A.today ? A.today.breakSec : 0;
+  if (s) {
+    const L = live(), type = phaseType(s), tgt = type === 'break' ? c.b * 60 : c.w * 60 + A.P.extra, rem = tgt - L.p;
+    if (s.status === 'working') { workSec += L.e; }
+    if (s.status === 'break') { breakSec += L.e; }
+    prog = Math.min(1, Math.max(0, L.p / tgt));
+    if (type === 'break') { color = '#4CAF87'; label = s.status === 'paused' ? 'หยุดชั่วคราว (ช่วงพัก)' : 'กำลังพัก'; chip = [s.status === 'paused' ? 'หยุดชั่วคราว' : 'พักอยู่', 'ok']; sub = rem > 0 ? 'เหลือเวลาพักอีก ' + fmtClock(rem) : 'หมดเวลาพักแล้ว กลับไปทำงานเมื่อพร้อม'; }
+    else { label = s.status === 'paused' ? 'หยุดชั่วคราว' : (rem > 0 ? 'ช่วงโฟกัส' : 'เลยเวลาพักแล้ว'); chip = [s.status === 'paused' ? 'หยุดชั่วคราว' : 'กำลังโฟกัส', s.status === 'paused' ? 'warn' : '']; sub = rem > 0 ? 'อีก ' + fmtClock(rem) + ' ถึงเวลาพัก' : 'ทำงานเกินเวลาแนะนำมา ' + fmtClock(-rem); if (rem <= 0) color = '#E8A33D'; }
+    time = rem >= 0 ? fmtClock(rem) : '+' + fmtClock(-rem);
+    if (s.status === 'working' && rem > 0) next = new Date(nowMs() + rem * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
+    else if (s.status === 'working') next = 'ตอนนี้';
+    else if (s.status === 'paused') next = '(หยุดอยู่)';
+  }
+  tt.textContent = time; $('#t-label').textContent = label; $('#t-sub').textContent = sub;
+  ring.setAttribute('stroke-dashoffset', String(C * (1 - prog))); ring.setAttribute('stroke', color);
+  const ch = $('#st-chip'); ch.textContent = chip[0]; ch.className = 'chip ' + chip[1];
+  $('#st-work').textContent = fmtDur(workSec); $('#st-break').textContent = fmtDur(breakSec); $('#st-next').textContent = next;
+  $('#st-cycles').textContent = (A.today ? A.today.cycles : 0) + ' / ' + (A.today ? A.today.breakCount : 0);
+  const goal = A.profile.dailyGoalMin * 60; $('#st-goal').style.width = Math.min(100, workSec / goal * 100) + '%';
+  $('#st-goaltxt').textContent = fmtDur(workSec) + ' จาก ' + fmtDur(goal);
+}
+let lastBtnKey = '';
+function startTick() {
+  if (startTick.on) return; startTick.on = true;
+  setInterval(() => {
+    if (!A.profile) return;
+    checkAlerts();
+    if (A.view === 'dashboard') {
+      const k = A.session ? A.session.status + ':' + phaseType(A.session) : 'none';
+      if (k !== lastBtnKey) { lastBtnKey = k; rerender(); } else paintTimer();
+    }
+    if (A.session) {
+      const L = live(), type = phaseType(A.session), tgt = type === 'break' ? cfg().b * 60 : cfg().w * 60 + A.P.extra;
+      document.title = (A.titleAlert && Math.floor(Date.now() / 1000) % 2 ? A.titleAlert : fmtClock(Math.max(0, tgt - L.p)) + (type === 'break' ? ' · พัก' : ' · โฟกัส')) + ' — Re:focus';
+    } else document.title = 'Re:focus';
+  }, 1000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && A.profile) { checkAlerts(); if (A.view === 'dashboard') paintTimer(); } });
+}
+
+/* ---------- Break library ---------- */
+function vBreak() {
+  const f = A.filter, list = A.activities.filter(a => f === 'all' || (f === 'you' ? a.forYou : f === 'free' ? a.screenFree : a.category === f));
+  const F = [['all', 'ทั้งหมด'], ['you', 'สำหรับสายงานฉัน'], ['move', 'Move & Stretch'], ['mind', 'Mind Reset'], ['game', 'Mini Games'], ['free', 'ไม่ใช้หน้าจอ']];
+  const inBreak = A.session && A.session.status === 'break';
+  return `<h1>กิจกรรมพัก</h1><p class="muted">${inBreak ? 'คุณอยู่ในช่วงพัก เลือกกิจกรรมได้เลย' : 'ลองทำกิจกรรมไหนก็ได้ หากกำลังทำงานอยู่ ระบบจะเริ่มช่วงพักให้อัตโนมัติ'}</p>
+  <div class="filters">${F.map(x => `<button class="btn ${f === x[0] ? 'on' : ''}" data-act="filter" data-v="${x[0]}">${x[1]}</button>`).join('')}</div>
+  <div class="acards">${list.map(actCard).join('')}</div>`;
+}
+function showUpsell(a) {
+  openModal(`<div class="mico">🔒</div><h2 class="center">${esc(a.name)}</h2><p class="center muted">กิจกรรมนี้อยู่ในแพ็กเกจ Premium — ${esc(a.description)}</p>
+  <div class="mbtns"><button class="btn primary" data-act="goPlan">ดูรายละเอียดแพ็กเกจ</button><button class="btn ghost" data-act="closeModal">ไว้ก่อน</button></div>`);
+}
+
+/* =====================================================================
+ * Activity runner
+ * ===================================================================== */
+let R = null;
+const BREATH = { n02: [['หายใจเข้า', 4], ['หายใจออก', 6]], n09: [['หายใจเข้า', 4], ['กลั้นเบา ๆ', 4], ['หายใจออก', 4], ['พัก', 4]] };
+async function startActivity(id) {
+  const act = A.activities.find(a => a.id === id); if (!act) return;
+  if (act.locked) { showUpsell(act); return; }
+  if (A.session && A.session.status === 'working') {
+    try { applySession(await rpc('beginBreak', au(), A.session.sessionId)); toast('เริ่มช่วงพักให้แล้ว', { type: 'ok' }); }
+    catch (e) { fail(e); return; }
+  }
+  runActivity(act);
+}
+function runActivity(act) {
+  closeModal();
+  R = { act, t0: Date.now(), dur: act.durationSec * 1000, done: false, rating: 0, rid: uid(), elapsed: 0, api: { onTimeUp: null, cleanup: null, end: null }, stepIdx: -1, timer: null };
+  const rn = $('#runner');
+  rn.innerHTML = `<div class="run-top"><button class="btn sm" data-act="runExit">✕ ออก</button><h3>${esc(act.name)}</h3><div id="r-time">--:--</div></div>
+   <div class="run-bar"><i id="r-bar"></i></div><div class="run-body"><div class="run-in" id="r-body"></div></div>
+   <div class="run-foot"><button class="btn sm" data-act="runRestart">↺ เริ่มใหม่</button><span class="muted" id="r-break"></span><button class="btn sm" data-act="runExit">กลับไปหน้าพัก</button></div>`;
+  rn.classList.add('open'); document.body.classList.add('noscroll');
+  R.api.end = text => finishRun(text, true);
+  const body = $('#r-body');
+  if (act.gameKey && GAMES[act.gameKey]) GAMES[act.gameKey](body, R.api); else guided(body, act);
+  R.timer = setInterval(runTick, 200); runTick();
+}
+function runTick() {
+  if (!R || R.done) return;
+  const el = Date.now() - R.t0, rem = Math.max(0, R.dur - el);
+  $('#r-time').textContent = fmtClock(rem / 1000); $('#r-bar').style.width = Math.min(100, el / R.dur * 100) + '%';
+  const rb = $('#r-break');
+  if (rb) { const s = A.session; if (s && s.status === 'break') { const L = live(); rb.textContent = 'เวลาพักเหลือ ' + (cfg().b * 60 - L.p > 0 ? fmtClock(cfg().b * 60 - L.p) : 'หมดแล้ว'); } else rb.textContent = ''; }
+  if (R.guided) R.guided(el);
+  if (rem <= 0) { const f = R.api.onTimeUp; if (f) f(); if (R && !R.done) finishRun('ครบเวลาแล้ว', true); }
+}
+function stopRun() { if (!R) return; clearInterval(R.timer); try { R.api.cleanup && R.api.cleanup(); } catch (e) { } }
+function closeRunner() { stopRun(); R = null; $('#runner').classList.remove('open'); $('#runner').innerHTML = ''; document.body.classList.remove('noscroll'); }
+function finishRun(text, completed) {
+  if (!R || R.done) return; R.done = true; stopRun();
+  R.elapsed = Math.min(Math.round((Date.now() - R.t0) / 1000), R.act.durationSec); R.completed = completed;
+  $('#r-body').innerHTML = `<div class="finish"><div class="big">🎉</div><h2>${esc(text || 'ครบแล้ว')}</h2>
+   <p style="font-size:18px;margin:10px 0">พักครบแล้ว พร้อมกลับไปทำงานต่อหรือยัง?</p>
+   <p class="muted">รู้สึกอย่างไรหลังทำกิจกรรมนี้? (ไม่บังคับ)</p><div class="stars">${[1, 2, 3, 4, 5].map(i => `<button data-act="rate" data-v="${i}" aria-label="${i} ดาว">⭐</button>`).join('')}</div>
+   <div class="mbtns"><button class="btn primary" data-act="runBackToWork">กลับไปทำงานต่อ</button><button class="btn" data-act="runAnother">เลือกกิจกรรมอื่น</button></div></div>`;
+  $('#r-time').textContent = '00:00'; $('#r-bar').style.width = '100%';
+}
+function saveRunLog(completed) {
+  if (!R) return Promise.resolve();
+  const p = { clientRequestId: R.rid, kind: 'activity', activityId: R.act.id, sessionId: A.session ? A.session.sessionId : '', durationSec: R.elapsed, completed, rating: R.rating || 0 };
+  const send = () => rpc('saveActivityLog', au(), p).then(() => { rpc('getRecommendedActivities', au(), { breakSec: cfg().b * 60 }).then(r => { A.recommended = r.items; }).catch(() => { }); });
+  return send().catch(e => toast('บันทึกกิจกรรมไม่สำเร็จ: ' + e.message, { type: 'err', sticky: true, label: 'ลองส่งอีกครั้ง', action: () => send().then(() => toast('บันทึกแล้ว', { type: 'ok' })).catch(er => toast(er.message, { type: 'err' })) }));
+}
+function guided(body, act) {
+  const steps = act.steps && act.steps.length ? act.steps : ['ทำตามความสบายของคุณ'], per = R.dur / steps.length, br = BREATH[act.id];
+  body.innerHTML = `${br ? `<div class="breath"><div id="b-circle"></div><span id="b-text">เตรียมตัว</span></div>` : ''}
+   <div class="g-step"><small id="g-n"></small><p id="g-t"></p></div>
+   <ol class="g-list">${steps.map((s, i) => `<li id="gs${i}">${esc(s)}</li>`).join('')}</ol>
+   <div class="row" style="justify-content:space-between">${act.reps ? `<span class="chip">จำนวน: ${esc(act.reps)}</span>` : '<span></span>'}<button class="btn sm" data-act="skipStep">ข้ามขั้นตอนนี้ ›</button></div>
+   ${act.safety && act.safety !== '-' ? `<div class="safety">⚠️ ${esc(act.safety)} หากรู้สึกเจ็บให้หยุดทันที</div>` : ''}`;
+  R.per = per;
+  R.guided = el => {
+    const i = Math.min(steps.length - 1, Math.floor(el / per));
+    if (i !== R.stepIdx) { R.stepIdx = i; $('#g-n').textContent = 'ขั้นตอน ' + (i + 1) + ' / ' + steps.length; $('#g-t').textContent = steps[i]; steps.forEach((_, k) => { const li = $('#gs' + k); if (li) li.className = k < i ? 'done' : k === i ? 'cur' : ''; }); }
+    if (br) {
+      const total = br.reduce((s, x) => s + x[1], 0) * 1000; let t = el % total, k = 0; while (t >= br[k][1] * 1000) { t -= br[k][1] * 1000; k++; }
+      if (k !== R.bi) { R.bi = k; const c = $('#b-circle'), nm = br[k][0]; R.scale = /เข้า/.test(nm) ? 1 : /ออก/.test(nm) ? .55 : (R.scale || .55); c.style.transition = `transform ${br[k][1]}s ease-in-out`; c.style.transform = `scale(${R.scale})`; }
+      $('#b-text').textContent = br[k][0] + ' ' + Math.ceil(br[k][1] - t / 1000);
+    }
+  };
+}
+
+/* =====================================================================
+ * Mini games (เล่นได้จริงทุกเกม)
+ * ===================================================================== */
+const GAMES = {};
+const later = (fn, ms) => setTimeout(() => { if (R && !R.done) fn(); }, ms);
+GAMES.memory = (box, api) => {
+  const em = shuffle(['🍎', '🌿', '⭐', '🐳', '🎈', '🍋', '🔷', '🎧']).slice(0, 6), cards = shuffle([...em, ...em]); let open = [], matched = 0, moves = 0, lock = false;
+  box.innerHTML = `<div class="gstat">จับคู่ภาพให้ครบ · พลิกแล้ว <b id="gm">0</b> ครั้ง</div><div class="memgrid">${cards.map((c, i) => `<button class="mcard" data-i="${i}" aria-label="การ์ดใบที่ ${i + 1}">?</button>`).join('')}</div>`;
+  $('.memgrid', box).onclick = e => {
+    const b = e.target.closest('.mcard'); if (!b || lock || b.classList.contains('up') || b.classList.contains('ok')) return;
+    b.classList.add('up'); b.textContent = cards[+b.dataset.i]; open.push(b);
+    if (open.length === 2) {
+      moves++; $('#gm', box).textContent = moves; const [x, y] = open;
+      if (cards[+x.dataset.i] === cards[+y.dataset.i]) { x.classList.add('ok'); y.classList.add('ok'); open = []; if (++matched === 6) api.end('จับคู่ครบใน ' + moves + ' ครั้ง'); }
+      else { lock = true; later(() => { open.forEach(c => { c.classList.remove('up'); c.textContent = '?'; }); open = []; lock = false; }, 700); }
+    }
+  };
+  api.onTimeUp = () => api.end('จับคู่ได้ ' + matched + '/6 คู่');
+};
+GAMES.sequence = (box, api) => {
+  let seq = [], pos = 0, lives = 3, best = 0, input = false; const tm = [];
+  box.innerHTML = `<div class="gstat" id="gs"></div><div class="seqgrid">${[...Array(9)].map((_, i) => `<button data-i="${i}" aria-label="ช่อง ${i + 1}"></button>`).join('')}</div><p class="muted center" style="margin-top:12px">โอกาส: <b id="gl">3</b></p>`;
+  const cells = $$('.seqgrid button', box), st = $('#gs', box);
+  const flash = (i, ms = 450) => { cells[i].classList.add('lit'); setTimeout(() => cells[i] && cells[i].classList.remove('lit'), ms); };
+  const play = () => { input = false; pos = 0; seq.push(rand(9)); st.textContent = 'ดูลำดับ… (ระดับ ' + seq.length + ')'; seq.forEach((c, k) => tm.push(setTimeout(() => flash(c), 600 + k * 650))); tm.push(setTimeout(() => { input = true; st.textContent = 'ตาคุณ: แตะตามลำดับ'; }, 600 + seq.length * 650)); };
+  $('.seqgrid', box).onclick = e => {
+    const b = e.target.closest('button'); if (!b || !input) return; const i = +b.dataset.i; flash(i, 200);
+    if (i === seq[pos]) { if (++pos === seq.length) { best = seq.length; input = false; st.textContent = 'ถูกต้อง!'; tm.push(setTimeout(play, 700)); } }
+    else { lives--; $('#gl', box).textContent = lives; if (lives <= 0) { api.end('จำได้สูงสุด ' + best + ' ตำแหน่ง'); return; } st.textContent = 'ผิด เหลือ ' + lives + ' โอกาส ลองใหม่'; seq.pop(); input = false; tm.push(setTimeout(play, 900)); }
+  };
+  api.cleanup = () => tm.forEach(clearTimeout); api.onTimeUp = () => api.end('จำได้สูงสุด ' + best + ' ตำแหน่ง'); play();
+};
+GAMES.color = (box, api) => {
+  const C = [['แดง', '#E5534B'], ['น้ำเงิน', '#3B6FD8'], ['เขียว', '#2FA66A'], ['เหลือง', '#D9A400'], ['ม่วง', '#8E5BD6']], total = 12; let n = 0, ok = 0;
+  const next = () => {
+    if (n >= total) { api.end('ถูก ' + ok + '/' + total + ' ข้อ'); return; }
+    const w = C[rand(5)], ink = C[rand(5)]; n++;
+    box.innerHTML = `<div class="gstat">ข้อ ${n}/${total} · ถูก ${ok}</div><p class="center muted">ตัวอักษรนี้ “สี” อะไร?</p><div class="cword" style="color:${ink[1]}">${w[0]}</div><div class="opts">${C.map(c => `<button class="opt" data-n="${c[0]}">${c[0]}</button>`).join('')}</div>`;
+    $$('.opt', box).forEach(b => b.onclick = () => { if (b.dataset.n === ink[0]) ok++; $$('.opt', box).forEach(x => x.disabled = true); b.classList.add(b.dataset.n === ink[0] ? 'right' : 'wrong'); later(next, 350); });
+  }; next(); api.onTimeUp = () => api.end('ถูก ' + ok + ' ข้อ');
+};
+GAMES.odd = (box, api) => {
+  const P = [['🕐', '🕑'], ['🍎', '🍅'], ['😀', '😃'], ['🔺', '🔻'], ['🌕', '🌝'], ['🐶', '🐕'], ['⬛', '◼️']]; let level = 1;
+  const next = () => {
+    const n = Math.min(7, 3 + level), pr = P[rand(P.length)], odd = rand(n * n), sw = rand(2);
+    box.innerHTML = `<div class="gstat">ระดับ ${level} · แตะไอคอนที่ต่างจากกลุ่ม</div><div class="oddgrid" style="grid-template-columns:repeat(${n},1fr)">${[...Array(n * n)].map((_, i) => `<button data-i="${i}" aria-label="ช่อง ${i + 1}">${i === odd ? pr[1 - sw] : pr[sw]}</button>`).join('')}</div>`;
+    $('.oddgrid', box).onclick = e => { const b = e.target.closest('button'); if (!b) return; if (+b.dataset.i === odd) { level++; next(); } else { b.classList.add('shake'); b.style.background = '#FDECEB'; } };
+  }; next(); api.onTimeUp = () => api.end('ผ่านถึงระดับ ' + level);
+};
+GAMES.order = (box, api) => {
+  let rounds = 0, want = 1;
+  const next = () => {
+    want = 1; const nums = shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    box.innerHTML = `<div class="gstat">แตะเลข 1 → 9 ตามลำดับ · เรียงครบแล้ว ${rounds} รอบ</div><div class="ordgrid">${nums.map(n => `<button data-n="${n}">${n}</button>`).join('')}</div>`;
+    $('.ordgrid', box).onclick = e => { const b = e.target.closest('button'); if (!b || b.classList.contains('got')) return; if (+b.dataset.n === want) { b.classList.add('got'); if (++want > 9) { rounds++; later(next, 250); } } else { b.classList.add('bad', 'shake'); setTimeout(() => b.classList.remove('bad', 'shake'), 300); } };
+  }; next(); api.onTimeUp = () => api.end('เรียงครบ ' + rounds + ' รอบ');
+};
+GAMES.logic = (box, api) => {
+  let n = 0, ok = 0; const total = 8;
+  const gen = () => {
+    const t = rand(4); let seq, ans;
+    if (t === 0) { const a = 1 + rand(9), d = 2 + rand(6); seq = [0, 1, 2, 3].map(i => a + d * i); ans = a + d * 4; }
+    else if (t === 1) { const a = 1 + rand(4), r = 2 + rand(2); seq = [0, 1, 2, 3].map(i => a * r ** i); ans = a * r ** 4; }
+    else if (t === 2) { const a = 2 + rand(8), x = 1 + rand(4), y = 2 + rand(5); const s = [a]; for (let i = 0; i < 4; i++) s.push(s[i] + (i % 2 ? y : x)); ans = s.pop(); seq = s; }
+    else { const k = 1 + rand(5); seq = [0, 1, 2, 3].map(i => (k + i) ** 2); ans = (k + 4) ** 2; }
+    const set = new Set([ans]); while (set.size < 4) set.add(ans + (rand(9) - 4 || 5));
+    return { seq, ans, opts: shuffle([...set]) };
+  };
+  const next = () => {
+    if (n >= total) { api.end('ถูก ' + ok + '/' + total + ' ข้อ'); return; } n++; const q = gen();
+    box.innerHTML = `<div class="gstat">ข้อ ${n}/${total} · ถูก ${ok}</div><div class="qtxt">${q.seq.join(' , ')} , ?</div><div class="opts">${q.opts.map(o => `<button class="opt" data-v="${o}">${o}</button>`).join('')}</div>`;
+    $$('.opt', box).forEach(b => b.onclick = () => { const right = +b.dataset.v === q.ans; if (right) ok++; $$('.opt', box).forEach(x => { x.disabled = true; if (+x.dataset.v === q.ans) x.classList.add('right'); }); if (!right) b.classList.add('wrong'); later(next, 600); });
+  }; next(); api.onTimeUp = () => api.end('ถูก ' + ok + ' ข้อ');
+};
+function mcGame(bank, count, label) {
+  return (box, api) => {
+    const qs = shuffle(bank).slice(0, count); let n = 0, ok = 0;
+    const next = () => {
+      if (n >= qs.length) { api.end('ถูก ' + ok + '/' + qs.length + ' ข้อ'); return; } const q = qs[n++]; const opts = shuffle([q[1], ...q[2]]);
+      box.innerHTML = `<div class="gstat">ข้อ ${n}/${qs.length} · ถูก ${ok}</div><div class="qtxt">${esc(q[0])}</div><div class="opts">${opts.map(o => `<button class="opt" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div>`;
+      $$('.opt', box).forEach(b => b.onclick = () => { const right = b.dataset.v === q[1]; if (right) ok++; $$('.opt', box).forEach(x => { x.disabled = true; if (x.dataset.v === q[1]) x.classList.add('right'); }); if (!right) b.classList.add('wrong'); later(next, 700); });
+    }; next(); api.onTimeUp = () => api.end('ถูก ' + ok + ' ข้อ');
+  };
+}
+GAMES.quiz = mcGame([
+  ['7 × 8 เท่ากับเท่าไร?', '56', ['54', '48', '64']], ['ดาวเคราะห์ดวงใดอยู่ใกล้ดวงอาทิตย์ที่สุด?', 'ดาวพุธ', ['ดาวศุกร์', 'ดาวอังคาร', 'ดาวพฤหัสบดี']],
+  ['1 ชั่วโมงมีกี่นาที?', '60', ['100', '30', '90']], ['สีเหลืองผสมสีน้ำเงินได้สีอะไร?', 'เขียว', ['ส้ม', 'ม่วง', 'ชมพู']],
+  ['ข้อใดเป็นสัตว์เลี้ยงลูกด้วยนม?', 'โลมา', ['ปลาฉลาม', 'เต่า', 'กบ']], ['พืชใช้แก๊สใดในการสังเคราะห์แสง?', 'คาร์บอนไดออกไซด์', ['ไนโตรเจน', 'ฮีเลียม', 'ไฮโดรเจน']],
+  ['มหาสมุทรที่ใหญ่ที่สุดในโลกคือ?', 'มหาสมุทรแปซิฟิก', ['มหาสมุทรแอตแลนติก', 'มหาสมุทรอินเดีย', 'มหาสมุทรอาร์กติก']], ['15% ของ 200 เท่ากับเท่าไร?', '30', ['15', '20', '45']],
+  ['HTML ใช้ทำอะไรบนเว็บ?', 'กำหนดโครงสร้างหน้าเว็บ', ['ตกแต่งเสียง', 'เก็บฐานข้อมูล', 'เข้ารหัสรหัสผ่าน']], ['น้ำแข็งละลายแล้วกลายเป็นอะไร?', 'น้ำ', ['ไอน้ำ', 'หิมะ', 'แก๊ส']]
+], 5);
+GAMES.wordlink = mcGame([
+  ['ทะเล', 'คลื่น', ['ตู้เย็น', 'ดินสอ', 'รองเท้า']], ['ห้องเรียน', 'กระดานดำ', ['เตาอบ', 'ชายหาด', 'หม้อหุงข้าว']], ['ฝน', 'ร่ม', ['พัดลม', 'แว่นกันแดด', 'ผ้าห่ม']],
+  ['หนังสือ', 'หน้ากระดาษ', ['ยางรถยนต์', 'เทียนไข', 'ปลั๊กไฟ']], ['ครัว', 'กระทะ', ['เตียง', 'โซฟา', 'ราวตากผ้า']], ['นักเขียน', 'ต้นฉบับ', ['ประแจ', 'หัวเทียน', 'กรรไกรตัดหญ้า']],
+  ['กาแฟ', 'เมล็ด', ['ตะปู', 'เสื้อกันหนาว', 'กระเป๋าสตางค์']], ['สนามบิน', 'เครื่องบิน', ['กระทะ', 'ตะเกียบ', 'หม้อ']]
+], 6);
+GAMES.vocab = (box, api) => {
+  const bank = [['break', 'พัก'], ['deadline', 'กำหนดส่ง'], ['meeting', 'การประชุม'], ['research', 'การวิจัย'], ['schedule', 'ตารางเวลา'], ['priority', 'ลำดับความสำคัญ'], ['review', 'ทบทวน'], ['goal', 'เป้าหมาย'], ['feedback', 'ข้อเสนอแนะ'], ['attention', 'ความใส่ใจ'], ['stretch', 'ยืดเหยียด'], ['reference', 'แหล่งอ้างอิง']];
+  const set = shuffle(bank).slice(0, 5), L = shuffle(set.map((p, i) => [p[0], i])), Rr = shuffle(set.map((p, i) => [p[1], i])); let sel = null, done = 0;
+  box.innerHTML = `<div class="gstat">แตะคำอังกฤษ แล้วแตะความหมายภาษาไทย</div><div class="pairs"><div style="display:grid;gap:10px" id="vl">${L.map(x => `<button class="opt" data-i="${x[1]}">${esc(x[0])}</button>`).join('')}</div><div style="display:grid;gap:10px" id="vr">${Rr.map(x => `<button class="opt" data-i="${x[1]}">${esc(x[0])}</button>`).join('')}</div></div>`;
+  $$('#vl .opt', box).forEach(b => b.onclick = () => { $$('#vl .opt', box).forEach(x => x.classList.remove('sel')); b.classList.add('sel'); sel = b; });
+  $$('#vr .opt', box).forEach(b => b.onclick = () => {
+    if (!sel) return;
+    if (sel.dataset.i === b.dataset.i) { sel.classList.add('done'); b.classList.add('done'); sel.classList.remove('sel'); sel = null; if (++done === 5) api.end('จับคู่ครบ 5 คำ'); }
+    else { b.classList.add('wrong', 'shake'); setTimeout(() => b.classList.remove('wrong', 'shake'), 350); }
+  });
+  api.onTimeUp = () => api.end('จับคู่ได้ ' + done + '/5 คำ');
+};
+GAMES.wordorder = (box, api) => {
+  const bank = [['วันนี้', 'ฉันจะ', 'พักสายตา', 'สักครู่'], ['การพักสั้น ๆ', 'ช่วยให้', 'กลับมา', 'โฟกัสได้ดีขึ้น'], ['เขา', 'ดื่มน้ำ', 'แล้วเดิน', 'ไปที่หน้าต่าง'], ['ฉันชอบ', 'อ่านหนังสือ', 'ตอนเช้า'], ['ทีมของเรา', 'ส่งงาน', 'ตรงเวลา', 'ทุกสัปดาห์']];
+  const qs = shuffle(bank).slice(0, 4); let n = 0, ok = 0;
+  const next = () => {
+    if (n >= qs.length) { api.end('เรียงถูก ' + ok + '/' + qs.length + ' ประโยค'); return; }
+    const q = qs[n++], tiles = shuffle(q.map((t, i) => [t, i])); let picked = [];
+    const draw = () => {
+      box.innerHTML = `<div class="gstat">ประโยคที่ ${n}/${qs.length} · แตะคำตามลำดับ (แตะคำที่เลือกแล้วเพื่อเอาออก)</div><div class="slot" id="ws">${picked.map(p => `<button class="tile" data-r="${p[1]}">${esc(p[0])}</button>`).join('') || '<span class="muted">ยังไม่ได้เลือก</span>'}</div><div class="tiles">${tiles.filter(t => !picked.includes(t)).map(t => `<button class="tile" data-t="${t[1]}">${esc(t[0])}</button>`).join('')}</div>`;
+      $$('[data-t]', box).forEach(b => b.onclick = () => { picked.push(tiles.find(t => t[1] === +b.dataset.t)); if (picked.length === q.length) { const right = picked.every((p, i) => p[1] === i); if (right) ok++; box.innerHTML = `<div class="finish"><div class="big">${right ? '✅' : '❌'}</div><p class="qtxt">${esc(q.join(' '))}</p></div>`; later(next, 1100); } else draw(); });
+      $$('[data-r]', box).forEach(b => b.onclick = () => { picked = picked.filter(p => p[1] !== +b.dataset.r); draw(); });
+    }; draw();
+  }; next(); api.onTimeUp = () => api.end('เรียงถูก ' + ok + ' ประโยค');
+};
+GAMES.creative = (box, api) => {
+  const W = [['กาแฟ', 'รถไฟ', 'ดวงจันทร์', 'ร่ม', 'กุญแจ', 'ทะเลทราย', 'หนังสือเก่า', 'นาฬิกา'], ['เงียบสงบ', 'ลึกลับ', 'ตลก', 'เร่งรีบ', 'อบอุ่น', 'แปลกประหลาด'], ['ในห้องสมุด', 'บนยอดเขา', 'กลางตลาด', 'ใต้ท้องทะเล', 'บนรถเมล์', 'ในสวนหลังบ้าน']];
+  const roll = () => `${W[1][rand(W[1].length)]} · ${shuffle(W[0]).slice(0, 2).join(' + ')} · ${W[2][rand(W[2].length)]}`;
+  box.innerHTML = `<div class="gstat">คิดไอเดียหรือเล่าเรื่องสั้น ๆ จากคำเหล่านี้ (ข้อความนี้ไม่ถูกบันทึก)</div><div class="qtxt" id="cw">${esc(roll())}</div><textarea placeholder="พิมพ์ไอเดียหรือเรื่องสั้น ๆ ของคุณ… (หรือคิดในใจก็ได้)"></textarea><div class="row" style="margin-top:12px;justify-content:space-between"><button class="btn sm" id="cr">🎲 สุ่มคำใหม่</button><button class="btn sm primary" id="cd">เสร็จแล้ว</button></div>`;
+  $('#cr', box).onclick = () => { $('#cw', box).textContent = roll(); }; $('#cd', box).onclick = () => api.end('ได้ไอเดียใหม่แล้ว'); api.onTimeUp = () => api.end('หมดเวลา — ได้ไอเดียใหม่แล้ว');
+};
+GAMES.recall = (box, api) => {
+  const pool = ['แมว', 'ภูเขา', 'ปากกา', 'รถไฟ', 'ดอกไม้', 'แก้วน้ำ', 'หมอน', 'ประตู', 'นาฬิกา', 'ร่ม', 'กุญแจ', 'ขนมปัง', 'ต้นไม้', 'เรือ']; const all = shuffle(pool), target = all.slice(0, 6), decoy = all.slice(6, 10); let phase = 1, left = 8, tmr;
+  box.innerHTML = `<div class="gstat" id="rs">จำคำเหล่านี้ภายใน <b id="rl">8</b> วินาที</div><div class="tiles" id="rw">${target.map(w => `<span class="tile" style="font-size:22px">${w}</span>`).join('')}</div>`;
+  const pick = new Set();
+  const quiz = () => {
+    phase = 2; box.innerHTML = `<div class="gstat" id="rs">เลือกคำที่เคยเห็น 6 คำ (เลือกแล้ว <b id="pc">0</b>/6)</div><div class="tiles">${shuffle([...target, ...decoy]).map(w => `<button class="tile" data-w="${w}">${w}</button>`).join('')}</div><div class="center"><button class="btn primary" id="rc" disabled>ตรวจคำตอบ</button></div>`;
+    $$('[data-w]', box).forEach(b => b.onclick = () => { const w = b.dataset.w; if (pick.has(w)) { pick.delete(w); b.style.background = ''; } else if (pick.size < 6) { pick.add(w); b.style.background = '#BFD6FF'; } $('#pc', box).textContent = pick.size; $('#rc', box).disabled = pick.size !== 6; });
+    $('#rc', box).onclick = () => { const good = [...pick].filter(w => target.includes(w)).length; api.end('จำได้ถูก ' + good + '/6 คำ'); };
+  };
+  tmr = setInterval(() => { left--; const e = $('#rl', box); if (e) e.textContent = left; if (left <= 0) { clearInterval(tmr); if (R && !R.done) quiz(); } }, 1000);
+  api.cleanup = () => clearInterval(tmr); api.onTimeUp = () => api.end(phase === 1 ? 'หมดเวลา' : 'จำได้ถูก ' + [...pick].filter(w => target.includes(w)).length + '/6 คำ');
+};
+GAMES.reflect = (box, api) => {
+  const M = [['😄', 'สดใส', 'ดีมาก! เก็บพลังนี้ไว้ใช้ตอนกลับไปทำงาน'], ['🙂', 'โอเค', 'ไม่เป็นไรเลย ค่อย ๆ ไปทีละอย่าง'], ['😐', 'เฉย ๆ', 'ลองหายใจลึก ๆ สักสองครั้ง แล้วเลือกงานเล็ก ๆ ที่ทำได้ง่ายก่อน'], ['😮‍💨', 'เหนื่อย', 'เหนื่อยก็พักได้ ดื่มน้ำสักแก้ว แล้วค่อยกลับไปทำต่อเมื่อพร้อม'], ['😟', 'กังวล', 'ลองเขียนสิ่งที่กังวล 1 ข้อลงกระดาษ แล้วเลือกขั้นเล็ก ๆ ที่ทำได้ใน 5 นาที']];
+  box.innerHTML = `<div class="gstat">ตอนนี้คุณรู้สึกอย่างไร? (ไม่ถูกบันทึก)</div><div class="moods">${M.map((m, i) => `<button data-i="${i}" aria-label="${m[1]}">${m[0]}</button>`).join('')}</div><div class="qtxt" id="rm" style="margin-top:20px"></div><div class="center"><button class="btn primary" id="rd" disabled>เสร็จแล้ว</button></div>`;
+  $$('.moods button', box).forEach(b => b.onclick = () => { $$('.moods button', box).forEach(x => x.classList.remove('on')); b.classList.add('on'); $('#rm', box).textContent = M[+b.dataset.i][1] + ' — ' + M[+b.dataset.i][2]; $('#rd', box).disabled = false; });
+  $('#rd', box).onclick = () => api.end('เช็กความรู้สึกเรียบร้อย'); api.onTimeUp = () => api.end('หมดเวลา');
+};
+
+/* =====================================================================
+ * Feedback
+ * ===================================================================== */
+let FB = null;
+function openFeedback() {
+  FB = { answer: '', score: 0, reasons: new Set(), comment: '', rid: uid(), sending: false };
+  openModal(`<h2>วันนี้ Re:focus ช่วยให้คุณกลับมามีสมาธิกับการทำงานได้จริงหรือไม่?</h2>
+  <div class="mbtns" style="margin-top:14px"><button class="opt" data-act="fbAns" data-v="Yes">✅ <b>ใช่</b> ช่วยให้กลับมาโฟกัสได้</button><button class="opt" data-act="fbAns" data-v="No">❌ <b>ไม่</b> ยังไม่ช่วยให้โฟกัสดีขึ้น</button></div>
+  <div id="fb-more"></div>
+  <p class="muted" style="margin-top:14px">คำตอบนี้ใช้เพื่อปรับปรุง Re:focus เท่านั้น เก็บโดยไม่ระบุชื่อ และไม่แสดงรายบุคคลในรายงานสาธารณะ</p>
+  <div class="mbtns"><button class="btn ghost" data-act="closeModal">ไว้ทีหลัง</button></div>`);
+}
+function renderFbMore() {
+  const box = $('#fb-more'); if (!box) return;
+  $$('[data-act="fbAns"]').forEach(b => b.classList.toggle('on', b.dataset.v === FB.answer));
+  const stars = `<label class="fl">รู้สึกอย่างไรหลังพัก? (1–5 ไม่บังคับ)</label><div class="stars">${[1, 2, 3, 4, 5].map(i => `<button data-act="fbScore" data-v="${i}" class="${FB.score >= i ? 'on' : ''}" aria-label="${i} ดาว">⭐</button>`).join('')}</div>`;
+  if (FB.answer === 'Yes') box.innerHTML = `${stars}<label class="fl" for="fb-c">อะไรช่วยได้มากที่สุด? (ไม่บังคับ)</label><textarea id="fb-c" maxlength="500">${esc(FB.comment)}</textarea><div class="mbtns"><button class="btn primary" data-act="fbSend">ส่งคำตอบ</button></div><div id="fb-msg"></div>`;
+  else if (FB.answer === 'No') box.innerHTML = `<label class="fl">สาเหตุที่เป็นไปได้ (เลือกได้หลายข้อ)</label><div class="seg">${A.settings.feedbackReasons.map(r => `<button class="opt ${FB.reasons.has(r) ? 'on' : ''}" data-act="fbReason" data-v="${esc(r)}">${esc(r)}</button>`).join('')}</div>
+   <label class="fl" for="fb-c">เพราะอะไร Re:focus จึงยังไม่ช่วยให้คุณกลับมาโฟกัส? <span style="color:var(--err)">*จำเป็น</span></label><textarea id="fb-c" maxlength="500" placeholder="พิมพ์เหตุผลของคุณ…">${esc(FB.comment)}</textarea><div class="mbtns"><button class="btn primary" data-act="fbSend">ส่งคำตอบ</button></div><div id="fb-msg"></div>`;
+}
+async function sendFeedback(btn) {
+  const c = $('#fb-c'); FB.comment = c ? c.value.trim() : '';
+  const msg = $('#fb-msg');
+  if (FB.answer === 'No' && FB.comment.length < 3) { msg.innerHTML = '<div class="note err">กรุณาบอกเหตุผลสั้น ๆ ก่อนส่ง เพื่อให้เราปรับปรุงได้ตรงจุด</div>'; $('#fb-c').focus(); return; }
+  msg.innerHTML = '';
+  await run(btn, async () => {
+    try {
+      const r = await rpc('saveFeedback', au(), { clientRequestId: FB.rid, answer: FB.answer, score: FB.score, reasons: [...FB.reasons], comment: FB.comment });
+      A.report = null; showDaySummary(r);
+    } catch (e) {
+      if (e.code === 'AUTH') throw e;
+      msg.innerHTML = `<div class="note err">ส่งไม่สำเร็จ: ${esc(e.message)}<br>ข้อมูลของคุณยังไม่ถูกบันทึก — กดส่งอีกครั้งได้ ระบบจะไม่บันทึกซ้ำ</div>`;
+    }
+  });
+}
+function showDaySummary(r) {
+  const yes = r.answer === 'Yes';
+  openModal(`<div class="mico">${yes ? '🌟' : '💙'}</div><h2 class="center">${r.duplicate ? 'บันทึกคำตอบนี้ไว้แล้ว' : 'บันทึกแล้ว ขอบคุณครับ'}</h2>
+  <p class="center">${yes ? 'ดีใจที่วันนี้ช่วยให้คุณกลับมาโฟกัสได้ พรุ่งนี้เราจะช่วยเตือนให้พักอีกครั้ง' : 'ขอบคุณที่บอกเรา — บางวันก็ไม่ได้ผลเท่าที่หวัง และไม่ใช่ความผิดของคุณเลย เราจะนำเหตุผลนี้ไปปรับปรุง'}</p>
+  ${r.workMinutes !== undefined ? `<div class="cards4" style="margin-top:12px"><div class="note center"><b>${r.workMinutes}</b> นาที<br><small>ทำงานวันนี้</small></div><div class="note center"><b>${r.breakCount}</b> ครั้ง<br><small>พักวันนี้</small></div></div>` : ''}
+  <div class="mbtns"><button class="btn primary" data-act="goReport">ดูสรุปประจำวัน</button><button class="btn ghost" data-act="closeModal">ปิด</button></div>`);
+}
+
+/* =====================================================================
+ * Report
+ * ===================================================================== */
+async function loadReport() {
+  const el = $('#rep'); if (!el) return;
+  if (A.report) { paintReport(); return; }
+  try { A.report = await rpc('getDailySummary', au()); paintReport(); }
+  catch (e) { el.innerHTML = `<div class="note err">โหลดรายงานไม่สำเร็จ: ${esc(e.message)}</div><button class="btn" style="margin-top:10px" onclick="loadReport()">ลองอีกครั้ง</button>`; if (e.code === 'AUTH') fail(e); }
+}
+function vReport() { return `<h1>รายงาน</h1><p class="muted">สรุปการทำงานและการพักของคุณ (เก็บย้อนหลังตามแพ็กเกจ: ${A.planDef.maxHistoryDays} วัน)</p><div id="rep"><p class="muted">กำลังโหลด…</p></div>`; }
+function paintReport() {
+  const r = A.report, t = r.today, el = $('#rep'); if (!el) return;
+  const days = r.series.slice(-14), max = Math.max(60, ...days.map(d => d.workMin));
+  const W = 600, H = 190, bw = days.length ? Math.min(34, (W - 20) / days.length - 8) : 20;
+  const chart = days.length ? `<svg viewBox="0 0 ${W} ${H + 30}" style="width:100%;height:auto;max-height:250px" role="img" aria-label="เวลาทำงานรายวัน">${days.map((d, i) => {
+    const x = 14 + i * ((W - 20) / days.length), h = d.workMin / max * H, col = d.answer === 'Yes' ? '#4CAF87' : d.answer === 'No' ? '#E8A33D' : '#5B8DEF';
+    return `<rect x="${x}" y="${H - h}" width="${bw}" height="${Math.max(2, h)}" rx="6" fill="${col}"><title>${d.day}: ทำงาน ${d.workMin} นาที</title></rect><text x="${x + bw / 2}" y="${H + 16}" text-anchor="middle" font-size="11" fill="#7B8798">${d.day.slice(8)}/${d.day.slice(5, 7)}</text>`;
+  }).join('')}<line x1="8" y1="${H}" x2="${W}" y2="${H}" stroke="#E3EAF4"/></svg>
+  <div class="row muted" style="font-size:13px"><span><span style="color:#4CAF87">■</span> วันที่ตอบ “ใช่”</span><span><span style="color:#E8A33D">■</span> วันที่ตอบ “ไม่”</span><span><span style="color:#5B8DEF">■</span> ยังไม่ได้ประเมิน</span></div>` : '<p class="muted">ยังไม่มีข้อมูล เริ่มงานสักรอบเพื่อดูกราฟ</p>';
+  const tr = r.trend;
+  el.innerHTML = `<div class="cards4" style="margin-top:14px">
+   <div class="card stat"><small>เวลาทำงานวันนี้</small><b>${fmtDur(t.workSec)}</b></div><div class="card stat"><small>เวลาพักรวม</small><b>${fmtDur(t.breakSec)}</b></div>
+   <div class="card stat"><small>รอบการทำงาน</small><b>${t.cycles}</b></div><div class="card stat"><small>จำนวนครั้งที่พัก</small><b>${t.breakCount}</b></div></div>
+   <div class="card" style="margin-top:14px"><h3>เวลาทำงานรายวัน (นาที)</h3>${chart}</div>
+   <div class="card" style="margin-top:14px"><h3>กิจกรรมที่ใช้บ่อย</h3>${r.topActivities.length ? r.topActivities.map(a => `<div class="rrow"><span>${esc(a.name)}</span><b>${a.count} ครั้ง</b></div>`).join('') : '<p class="muted">ยังไม่มีกิจกรรมที่ทำจนจบ</p>'}</div>
+   <div class="card" style="margin-top:14px"><h3>รูปแบบการพักของคุณ</h3><div class="rrow"><span>สายงาน</span><b>${esc(occOf(A.profile.occupation).label)}</b></div><div class="rrow"><span>โหมดเวลา</span><b>${{ standard: 'มาตรฐาน', long: 'ช่วงยาว', custom: 'กำหนดเอง' }[A.profile.mode]} (${cfg().w}/${cfg().b} นาที)</b></div><div class="rrow"><span>ประเมินวันนี้</span><b>${r.todayFeedback === 'Yes' ? '✅ ช่วยให้โฟกัส' : r.todayFeedback === 'No' ? '❌ ยังไม่ช่วย' : 'ยังไม่ได้ประเมิน'}</b></div></div>
+   <div class="card ${r.trendLocked ? 'lock' : ''}" style="margin-top:14px"><h3>แนวโน้ม: วันที่โฟกัสดีขึ้น เทียบกับวันที่ยังไม่ดีขึ้น ${r.trendLocked ? '<span class="badge premium">Premium</span>' : ''}</h3>
+   ${r.trendLocked ? '<p class="muted">รายงานแนวโน้มอยู่ในแพ็กเกจ Premium</p><button class="btn sm" data-act="goPlan">ดูรายละเอียดแพ็กเกจ</button>' : (tr && (tr.yesDays + tr.noDays) ? `<table><tr><th></th><th>วันที่ตอบ “ใช่” (${tr.yesDays} วัน)</th><th>วันที่ตอบ “ไม่” (${tr.noDays} วัน)</th></tr><tr><td>เวลาทำงานเฉลี่ย</td><td>${tr.yesAvgWork ?? '—'} นาที</td><td>${tr.noAvgWork ?? '—'} นาที</td></tr><tr><td>จำนวนพักเฉลี่ย</td><td>${tr.yesAvgBreaks ?? '—'} ครั้ง</td><td>${tr.noAvgBreaks ?? '—'} ครั้ง</td></tr></table><p class="muted" style="margin-top:8px">${esc(tr.note)}</p>` : '<p class="muted">ยังมีข้อมูลการประเมินไม่พอ ตอบแบบประเมินปลายวันสักสองสามวันเพื่อดูแนวโน้ม</p>')}</div>
+   <div class="row" style="margin-top:14px"><button class="btn" data-act="openFeedback">ประเมินวันนี้</button></div>`;
+}
+
+/* =====================================================================
+ * Plan
+ * ===================================================================== */
+function vPlan() {
+  const cur = A.profile.plan, F = A.plans.Free, P = A.plans.Premium, trial = A.settings.allowPremiumTrial && cur === 'Free' && !A.profile.planExpiresAt;
+  const li = (a) => a.map(x => `<li>${x}</li>`).join('');
+  return `<h1>แพ็กเกจ</h1><p class="muted">ต้นแบบนี้ยังไม่เชื่อมต่อการชำระเงินจริง</p>
+  <div class="plans" style="margin-top:14px">
+   <div class="card ${cur === 'Free' ? 'cur' : ''}"><span class="badge free">Free</span><h2 style="margin-top:6px">${esc(F.priceText)}</h2><ul>${li(['Timer และการแจ้งเตือน', 'สายงานพื้นฐาน (' + (F.allowedOccupations === 'ALL' ? 'ทั้งหมด' : F.allowedOccupations.map(k => occOf(k).label.split(' ')[0]).join(', ')) + ')', 'กิจกรรมพื้นฐานจำนวนจำกัด', 'สถิติรายวัน + แบบประเมิน', 'ประวัติย้อนหลัง ' + F.maxHistoryDays + ' วัน'])}</ul>${cur === 'Free' ? '<span class="chip ok">แพ็กเกจปัจจุบัน</span>' : ''}</div>
+   <div class="card ${cur === 'Premium' ? 'cur' : ''}"><span class="badge premium">Premium</span><h2 style="margin-top:6px">${esc(P.priceText)}</h2><ul>${li(['เลือกได้ทุกสายงาน', 'คลังกิจกรรมเต็ม เกม และท่ายืดเหยียดเพิ่มเติม', 'แนะนำกิจกรรมตามพฤติกรรมและคะแนนของคุณ', 'ปรับเวลาทำงาน/พักเองได้', 'รายงานแนวโน้ม + ประวัติ ' + P.maxHistoryDays + ' วัน'])}</ul>
+   ${cur === 'Premium' ? `<span class="chip ok">แพ็กเกจปัจจุบัน${A.profile.planExpiresAt ? ' · ทดลองถึง ' + new Date(A.profile.planExpiresAt).toLocaleDateString('th-TH') : ''}</span>` : (trial ? `<button class="btn primary" data-act="trial">ทดลอง Premium ${A.settings.trialDays} วัน (จำลอง)</button><p class="muted" style="margin-top:8px">เป็นสิทธิ์ทดลองแบบจำลอง ไม่มีการชำระเงิน</p>` : '<p class="muted">ยังไม่เปิดให้ชำระเงิน — ติดต่อผู้ดูแลเพื่อขอสิทธิ์ทดลอง</p>')}</div></div>`;
+}
+
+/* =====================================================================
+ * Settings
+ * ===================================================================== */
+function tog(id, on) { return `<button class="tog ${on ? 'on' : ''}" id="${id}" data-act="tog" role="switch" aria-checked="${on}" aria-label="${id}"></button>`; }
+function vSettings() {
+  const p = A.profile, S = A.settings, c = A.planDef, allowedOcc = k => c.allowedOccupations === 'ALL' || c.allowedOccupations.includes(k);
+  const modes = [['standard', 'มาตรฐาน', S.standardWorkMin + ' / ' + S.standardBreakMin + ' นาที'], ['long', 'ทำงานช่วงยาว', S.longWorkMin + ' / ' + S.longBreakMin + ' นาที'], ['custom', 'กำหนดเอง', c.allowCustomTimer ? 'ตั้งเวลาเอง' : '🔒 Premium']];
+  const notifSt = !('Notification' in window) ? 'เบราว์เซอร์นี้ไม่รองรับ' : Notification.permission === 'granted' ? 'อนุญาตแล้ว' : Notification.permission === 'denied' ? (IN_GAS ? 'ถูกบล็อก — หน้า Web App ของ Google มักบล็อกให้อัตโนมัติ (ใช้เสียง + หน้าต่างเตือน + ชื่อแท็บกะพริบแทน)' : 'ถูกบล็อก — กดไอคอนกุญแจข้างแถบที่อยู่ → การแจ้งเตือน → อนุญาต แล้วรีเฟรชหน้า') : 'ยังไม่ได้อนุญาต';
+  return `<h1>ตั้งค่า</h1>
+  <div class="card" style="margin-top:14px"><h3>สายงาน</h3><div class="occgrid">${A.occs.map(o => `<button class="opt ${p.occupation === o.key ? 'on' : ''} ${allowedOcc(o.key) ? '' : 'dis'}" data-act="setOcc" data-k="${o.key}">${o.icon} <b>${esc(o.label)}</b><small>${allowedOcc(o.key) ? '&nbsp;' : '🔒 Premium'}</small></button>`).join('')}</div></div>
+  <div class="card" style="margin-top:14px"><h3>จังหวะทำงาน–พัก</h3><div class="seg">${modes.map(m => `<button class="opt ${p.mode === m[0] ? 'on' : ''} ${m[0] === 'custom' && !c.allowCustomTimer ? 'dis' : ''}" data-act="setMode" data-v="${m[0]}"><b>${m[1]}</b><small>${m[2]}</small></button>`).join('')}</div>
+   ${p.mode === 'custom' && c.allowCustomTimer ? `<div class="row" style="margin-top:12px"><div style="flex:1"><label class="fl" for="cw">ทำงาน (นาที)</label><input type="number" id="cw" min="${S.minWorkMin}" max="${S.maxWorkMin}" value="${p.customWorkMin}"></div><div style="flex:1"><label class="fl" for="cb">พัก (นาที)</label><input type="number" id="cb" min="${S.minBreakMin}" max="${S.maxBreakMin}" value="${p.customBreakMin}"></div></div>` : ''}
+   <label class="fl" for="goal">เป้าหมายเวลาทำงานต่อวัน (นาที)</label><input type="number" id="goal" min="30" max="960" value="${p.dailyGoalMin}">
+   <div class="note" style="margin-top:12px">ค่าเวลาเหล่านี้เป็นค่าเริ่มต้นสำหรับทดลอง ไม่ใช่เวลาพักที่เหมาะกับทุกคน ปรับให้เข้ากับงานและร่างกายของคุณได้</div>
+   <div class="mbtns"><button class="btn primary" data-act="saveSettings">บันทึกการตั้งค่า</button></div></div>
+  <div class="card" style="margin-top:14px"><h3>การแจ้งเตือน</h3>
+   <div class="switch"><div><b>การแจ้งเตือนในหน้าเว็บ</b><br><span class="muted">แสดงหน้าต่างเตือนเมื่อถึงเวลาพักเสมอ</span></div><span class="chip ok">เปิดเสมอ</span></div>
+   <div class="switch"><div><b>เสียงแจ้งเตือน</b></div>${tog('pf-sound', A.prefs.sound)}</div>
+   <div class="switch"><div><b>การแจ้งเตือนของเบราว์เซอร์</b><br><span class="muted">สถานะ: ${notifSt}</span></div>${tog('pf-notify', A.prefs.notify && 'Notification' in window && Notification.permission === 'granted')}</div>
+   <div class="switch"><div><b>ช่วงเวลาเงียบ</b><br><span class="muted">ไม่มีเสียง/แจ้งเตือนเบราว์เซอร์ในช่วงนี้</span></div>${tog('pf-quiet', A.prefs.quiet)}</div>
+   <div class="row" style="margin-top:8px"><div><label class="fl" for="qf">ตั้งแต่</label><input type="time" id="qf" value="${A.prefs.quietFrom}" data-in="quiet"></div><div><label class="fl" for="qt">ถึง</label><input type="time" id="qt" value="${A.prefs.quietTo}" data-in="quiet"></div></div>
+   <div class="note warn" style="margin-top:12px">${IN_GAS ? '<b>หมายเหตุ:</b> คุณเปิดผ่านหน้า Web App ของ Google ซึ่งบล็อกการแจ้งเตือนของเบราว์เซอร์ — โฮสต์หน้านี้เองเพื่อเปิดใช้ฟีเจอร์นี้ (ดูคู่มือ)<br>' : ''}<b>ข้อจำกัดที่ควรรู้:</b> เมื่อปิดแท็บหรือเบราว์เซอร์ (หรือมือถือล็อกหน้าจอ) ตัวนับและการแจ้งเตือนอาจหยุดทำงาน แต่เมื่อกลับมา Re:focus จะคำนวณเวลาจริงจากเวลาของเซิร์ฟเวอร์ให้ถูกต้อง</div></div>
+  <div class="card" style="margin-top:14px"><h3>บัญชี</h3><label class="fl" for="em">อีเมล (ไม่บังคับ — ใช้ติดต่อเรื่องแบบประเมินเท่านั้น)</label><input type="email" id="em" value="${esc(p.email)}" placeholder="you@example.com">
+   <div class="mbtns"><button class="btn" data-act="saveEmail">บันทึกอีเมล</button></div>
+   <h3 style="margin-top:18px">รหัสบัญชีสำรอง</h3><p class="muted">ใช้กู้คืนบัญชีเมื่อเปลี่ยนเครื่องหรือล้างข้อมูลเบราว์เซอร์ เก็บเป็นความลับ</p><button class="btn sm" data-act="copyCode">คัดลอกรหัสสำรอง</button>
+   <div style="margin-top:18px"><button class="btn sm ghost" data-act="logout">ออกจากอุปกรณ์นี้</button> <button class="btn sm ghost" data-act="goAdmin">สำหรับผู้ดูแลระบบ</button></div></div>`;
+}
+function savePrefs() { store.set('rf_prefs', A.prefs); }
+async function saveProfile(patch, okMsg) {
+  const r = await rpc('saveUserProfile', au(), patch); A.profile = r.profile; toast(okMsg || 'บันทึกแล้ว', { type: 'ok' });
+}
+async function reloadAll() { const r = await rpc('getInitialData', au()); applyInit(r); }
+
+/* =====================================================================
+ * Admin
+ * ===================================================================== */
+function vAdmin() {
+  return `<h1>ผู้ดูแลระบบ</h1><p class="muted">ดูสรุป Feedback แบบไม่ระบุตัวตน ต้องใช้รหัสผู้ดูแล (ADMIN_KEY ใน Script properties)</p>
+  <div class="card" style="margin-top:14px"><label class="fl" for="ak">รหัสผู้ดูแล</label><input type="password" id="ak" value="${esc(A.adminKey)}" autocomplete="off">
+  <div class="row"><div style="flex:1;min-width:130px"><label class="fl" for="af">ตั้งแต่วันที่</label><input type="date" id="af"></div><div style="flex:1;min-width:130px"><label class="fl" for="at">ถึงวันที่</label><input type="date" id="at"></div></div>
+  <div class="row"><div style="flex:1;min-width:150px"><label class="fl" for="ao">สายงาน</label><select id="ao"><option value="">ทั้งหมด</option>${A.occs.map(o => `<option value="${o.key}">${esc(o.label)}</option>`).join('')}</select></div><div style="flex:1;min-width:150px"><label class="fl" for="ap">ประเภทสมาชิก</label><select id="ap"><option value="">ทั้งหมด</option><option>Free</option><option>Premium</option></select></div></div>
+  <div class="mbtns"><button class="btn primary" data-act="adminLoad">ดูสรุป Feedback</button></div></div><div id="adm-out"></div>
+  <div class="card" style="margin-top:14px"><h3>กำหนดแพ็กเกจให้ผู้ใช้</h3><div class="row"><input type="text" id="au-id" placeholder="UserId เช่น u_abc123" style="flex:2;min-width:160px"><select id="au-plan" style="flex:1;min-width:110px"><option>Premium</option><option>Free</option></select><input type="number" id="au-days" placeholder="วัน (ว่าง=ไม่หมดอายุ)" style="flex:1;min-width:130px"></div><div class="mbtns"><button class="btn" data-act="adminPlan">บันทึกแพ็กเกจ</button></div></div>`;
+}
+function paintAdmin(d) {
+  const mx = Math.max(1, ...d.reasons.map(r => r.count));
+  $('#adm-out').innerHTML = `<div class="cards4" style="margin-top:14px"><div class="card stat"><small>คำตอบทั้งหมด</small><b>${d.total}</b></div><div class="card stat"><small>✅ ใช่</small><b>${d.yes}</b></div><div class="card stat"><small>❌ ไม่</small><b>${d.no}</b></div><div class="card stat"><small>อัตราตอบ “ใช่”</small><b>${d.yesRate}%</b></div><div class="card stat"><small>คะแนนหลังพักเฉลี่ย</small><b>${d.avgScore ?? '—'}</b></div></div>
+  <div class="card" style="margin-top:14px"><h3>เหตุผลเมื่อตอบ “ไม่”</h3>${d.reasons.length ? d.reasons.map(r => `<div class="rrow" style="align-items:center"><span style="min-width:150px">${esc(r.reason)}</span><div class="hbar"><i style="width:${r.count / mx * 100}%"></i></div><b>${r.count}</b></div>`).join('') : '<p class="muted">ไม่มีข้อมูล</p>'}</div>
+  <div class="card" style="margin-top:14px"><h3>แยกตามสายงาน</h3><table><tr><th>สายงาน</th><th>ใช่</th><th>ไม่</th></tr>${d.byOccupation.map(o => `<tr><td>${esc(occOf(o.occupation).label)}</td><td>${o.yes}</td><td>${o.no}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">ไม่มีข้อมูล</td></tr>'}</table></div>
+  <div class="card" style="margin-top:14px"><h3>ข้อความจากผู้ใช้ (ไม่ระบุตัวตน)</h3>${d.comments.map(c => `<div class="rrow"><span>${c.answer === 'Yes' ? '✅' : '❌'} ${esc(c.comment)}</span><span class="muted">${esc(c.day)} · ${esc(occOf(c.occupation).label.split(' ')[0])}</span></div>`).join('') || '<p class="muted">ไม่มีข้อความ</p>'}</div>`;
+}
+
+/* =====================================================================
+ * Actions (event delegation)
+ * ===================================================================== */
+const ACT = {
+  nav: (el, e) => { e.preventDefault(); go(el.dataset.v); },
+  closeModal: () => closeModal(),
+  goPlan: () => { closeModal(); go('plan'); },
+  goReport: () => { closeModal(); go('report'); },
+  goAdmin: () => go('admin'),
+  filter: el => { A.filter = el.dataset.v; rerender(); },
+  openAct: el => startActivity(el.dataset.id),
+  start: el => run(el, async () => { applySession(await rpc('startWorkSession', au())); lastBtnKey = ''; rerender(); }),
+  pause: el => run(el, async () => { applySession(await rpc('pauseWorkSession', au(), A.session.sessionId)); lastBtnKey = ''; rerender(); }),
+  resume: el => run(el, async () => { applySession(await rpc('resumeWorkSession', au(), A.session.sessionId)); lastBtnKey = ''; rerender(); }),
+  takeBreak: el => run(el, async () => { closeModal(); logChoice('take'); applySession(await rpc('beginBreak', au(), A.session.sessionId)); lastBtnKey = ''; go('dashboard'); }),
+  backToWork: el => run(el, async () => { closeModal(); applySession(await rpc('endBreak', au(), A.session.sessionId)); logChoice('done'); lastBtnKey = ''; go('dashboard'); }),
+  postpone: el => {
+    if (A.P.postponed >= A.settings.maxPostpones) return;
+    A.P.extra += A.settings.postponeMin * 60; A.P.postponed++; A.P.alerted = false; savePhase(); logChoice('postpone'); closeModal(); toast('เลื่อนการพักไป ' + A.settings.postponeMin + ' นาที'); paintTimer();
+  },
+  skipRound: el => run(el, async () => { closeModal(); logChoice('skip'); applySession(await rpc('skipBreak', au(), A.session.sessionId)); lastBtnKey = ''; rerender(); }),
+  finish: el => openModal(`<div class="mico">🏁</div><h2 class="center">จบงานตอนนี้?</h2><p class="center muted">ระบบจะบันทึกเวลาทำงานและเวลาพักของรอบนี้</p><div class="mbtns"><button class="btn primary" data-act="finishYes">จบงาน</button><button class="btn ghost" data-act="closeModal">ทำต่อ</button></div>`),
+  finishYes: el => run(el, async () => {
+    const r = await rpc('finishWorkSession', au(), A.session.sessionId); const s = r.session; applySession(r); A.session = null; A.report = null; lastBtnKey = ''; rerender();
+    openModal(`<div class="mico">🎉</div><h2 class="center">จบรอบทำงานแล้ว</h2><div class="cards4" style="margin-top:12px"><div class="note center"><b>${fmtDur(s.workSec)}</b><br><small>เวลาทำงาน</small></div><div class="note center"><b>${fmtDur(s.breakSec)}</b><br><small>เวลาพัก</small></div></div><div class="mbtns"><button class="btn primary" data-act="openFeedback">ประเมินวันนี้</button><button class="btn ghost" data-act="closeModal">ปิด</button></div>`);
+  }),
+  openFeedback: () => openFeedback(),
+  fbAns: el => { FB.answer = el.dataset.v; const c = $('#fb-c'); if (c) FB.comment = c.value; renderFbMore(); },
+  fbScore: el => { const c = $('#fb-c'); if (c) FB.comment = c.value; FB.score = FB.score === +el.dataset.v ? 0 : +el.dataset.v; renderFbMore(); },
+  fbReason: el => { const c = $('#fb-c'); if (c) FB.comment = c.value; const v = el.dataset.v; FB.reasons.has(v) ? FB.reasons.delete(v) : FB.reasons.add(v); renderFbMore(); },
+  fbSend: el => sendFeedback(el),
+  /* runner */
+  rate: el => { R.rating = +el.dataset.v; $$('.stars button').forEach((b, i) => b.classList.toggle('on', i < R.rating)); },
+  runRestart: () => { const a = R.act; stopRun(); runActivity(a); },
+  skipStep: () => { if (R && R.per) R.t0 -= (R.per - ((Date.now() - R.t0) % R.per)) + 5; },
+  runExit: () => { if (!R) return; if (!R.done) { const sec = Math.round((Date.now() - R.t0) / 1000); if (sec >= 5) { R.elapsed = Math.min(sec, R.act.durationSec); saveRunLog(false); } } closeRunner(); rerender(); },
+  runAnother: async el => { await saveRunLog(true); closeRunner(); go('break'); },
+  runBackToWork: el => run(el, async () => {
+    await saveRunLog(true); closeRunner();
+    if (A.session && A.session.status === 'break') { applySession(await rpc('endBreak', au(), A.session.sessionId)); logChoice('done'); }
+    lastBtnKey = ''; go('dashboard');
+  }),
+  /* onboarding */
+  obPick: el => { if (el.classList.contains('dis')) { toast('สายงานนี้ใช้ได้กับ Premium — เลือกสายงานพื้นฐานก่อน แล้วเปลี่ยนภายหลังได้'); return; } A.obOcc = el.dataset.k; $$('#ob-occ .opt').forEach(b => b.classList.toggle('on', b === el)); $('#ob-go').disabled = false; },
+  obStart: el => run(el, async () => { const r = await rpc('registerUser', { occupation: A.obOcc }); A.auth = { userId: r.userId, token: r.token }; store.set('rf_auth', A.auth); await boot(); }),
+  obRestore: el => run(el, async () => {
+    const code = ($('#ob-code').value || '').trim(), i = code.indexOf('.'); if (i < 1) throw new Error('รหัสไม่ถูกต้อง');
+    A.auth = { userId: code.slice(0, i), token: code.slice(i + 1) }; store.set('rf_auth', A.auth); await boot();
+  }),
+  /* settings */
+  setOcc: el => { if (el.classList.contains('dis')) { showUpsell({ name: 'สายงานเพิ่มเติม', description: 'เลือกได้ทุกสายงานและรับกิจกรรมที่ตรงกับสายงานนั้น' }); return; } run(el, async () => { await saveProfile({ occupation: el.dataset.k }, 'เปลี่ยนสายงานแล้ว'); await reloadAll(); rerender(); }); },
+  setMode: el => { if (el.classList.contains('dis')) { showUpsell({ name: 'โหมดกำหนดเอง', description: 'ตั้งเวลาทำงานและเวลาพักเองได้' }); return; } run(el, async () => { await saveProfile({ mode: el.dataset.v }, 'เปลี่ยนโหมดแล้ว'); rerender(); }); },
+  saveSettings: el => run(el, async () => {
+    const patch = { dailyGoalMin: +$('#goal').value };
+    if ($('#cw')) { patch.customWorkMin = +$('#cw').value; patch.customBreakMin = +$('#cb').value; }
+    await saveProfile(patch, 'บันทึกการตั้งค่าแล้ว'); rerender();
+  }),
+  saveEmail: el => run(el, async () => { await saveProfile({ email: $('#em').value }, 'บันทึกอีเมลแล้ว'); }),
+  tog: el => {
+    const id = el.id;
+    if (id === 'pf-sound') { A.prefs.sound = !A.prefs.sound; savePrefs(); if (A.prefs.sound) beep(); rerender(); }
+    else if (id === 'pf-quiet') { A.prefs.quiet = !A.prefs.quiet; savePrefs(); rerender(); }
+    else if (id === 'pf-notify') {
+      if (A.prefs.notify) { A.prefs.notify = false; savePrefs(); rerender(); return; }
+      if (!('Notification' in window)) { toast('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน ระบบจะใช้การแจ้งเตือนในหน้าเว็บแทน'); return; }
+      if (Notification.permission === 'denied') { toast(IN_GAS ? 'เบราว์เซอร์บล็อกการแจ้งเตือนของหน้านี้ไว้ (หน้า Web App ของ Google ฝังอยู่ใน iframe จึงมักถูกบล็อก) — ระบบใช้หน้าต่างเตือน เสียง และชื่อแท็บกะพริบแทน ให้เปิดแท็บ Re:focus ทิ้งไว้ระหว่างทำงาน' : 'เบราว์เซอร์บล็อกการแจ้งเตือนไว้ — กดไอคอนกุญแจข้างแถบที่อยู่ → การแจ้งเตือน → อนุญาต แล้วรีเฟรชหน้า', { ms: 9000 }); return; }
+      openModal(`<div class="mico">🔔</div><h2 class="center">เปิดการแจ้งเตือนของเบราว์เซอร์?</h2><p class="muted center">เราจะขออนุญาตแสดงการแจ้งเตือนเมื่อถึงเวลาพัก โดยจะเตือนเฉพาะตอนที่ Re:focus เปิดอยู่ในเบราว์เซอร์ หากไม่อนุญาต คุณยังได้รับการแจ้งเตือนในหน้าเว็บตามปกติ</p><div class="mbtns"><button class="btn primary" data-act="askNotif">ขออนุญาตแจ้งเตือน</button><button class="btn ghost" data-act="closeModal">ไม่ใช้ตอนนี้</button></div>`);
+    }
+  },
+  askNotif: async () => {
+    closeModal();
+    try { const p = await Notification.requestPermission(); A.prefs.notify = p === 'granted'; savePrefs(); toast(p === 'granted' ? 'เปิดการแจ้งเตือนแล้ว' : 'ไม่ได้รับอนุญาต — ใช้การแจ้งเตือนในหน้าเว็บแทน', { type: p === 'granted' ? 'ok' : '' }); }
+    catch (e) { toast('ขออนุญาตไม่สำเร็จ (บางหน้าฝังอาจบล็อกการแจ้งเตือน) — ใช้การแจ้งเตือนในหน้าเว็บแทน'); }
+    rerender();
+  },
+  copyCode: () => { const t = A.auth.userId + '.' + A.auth.token; (navigator.clipboard ? navigator.clipboard.writeText(t).then(() => toast('คัดลอกแล้ว', { type: 'ok' })).catch(() => prompt('คัดลอกรหัสนี้', t)) : prompt('คัดลอกรหัสนี้', t)); },
+  logout: () => { if (confirm('ออกจากอุปกรณ์นี้? หากไม่ได้สำรองรหัสบัญชีไว้ จะกลับมาใช้บัญชีเดิมไม่ได้')) { store.del('rf_auth'); location.reload(); } },
+  trial: el => run(el, async () => { await rpc('activatePremiumTrial', au()); await reloadAll(); A.report = null; toast('เริ่มทดลอง Premium แล้ว (ระบบจำลอง ไม่มีการชำระเงิน)', { type: 'ok' }); rerender(); }),
+  adminLoad: el => run(el, async () => {
+    A.adminKey = $('#ak').value; const f = { from: $('#af').value, to: $('#at').value, occupation: $('#ao').value, plan: $('#ap').value };
+    paintAdmin(await rpc('getFeedbackSummary', A.adminKey, f));
+  }),
+  adminPlan: el => run(el, async () => { A.adminKey = $('#ak').value; const r = await rpc('updateUserPlan', A.adminKey, $('#au-id').value, $('#au-plan').value, +$('#au-days').value || 0); toast('อัปเดตแพ็กเกจของ ' + r.userId + ' แล้ว', { type: 'ok' }); })
+};
+document.addEventListener('click', e => { const t = e.target.closest('[data-act]'); if (!t) return; const f = ACT[t.dataset.act]; if (f) f(t, e); });
+document.addEventListener('change', e => { if (e.target.dataset && e.target.dataset.in === 'quiet') { A.prefs.quietFrom = $('#qf').value || '22:00'; A.prefs.quietTo = $('#qt').value || '07:00'; savePrefs(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#modal').classList.contains('open')) closeModal(); });
+window.addEventListener('error', ev => { console.error(ev.message); });
+boot();
+</script>
+</body>
+</html>
